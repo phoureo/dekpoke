@@ -1,0 +1,3425 @@
+:root {
+  --orbit-bg: #f7f8fb;
+  --orbit-panel: #ffffff;
+  --orbit-panel-2: #fbfcfe;
+  --orbit-text: #1f2937;
+  --orbit-muted: #6b7280;
+  --orbit-line: #e5e7eb;
+  --orbit-primary: #5865f2;
+  --orbit-primary-soft: #eef0ff;
+  --orbit-danger: #d92d20;
+  --orbit-success: #16a34a;
+  --orbit-warning: #d97706;
+  --orbit-shadow: 0 8px 24px rgba(31, 41, 55, .06);
+  --orbit-drawer-width: min(720px, 42vw);
+}
+
+[data-theme="dark"] {
+  --orbit-bg: #0f1218;
+  --orbit-panel: #151922;
+  --orbit-panel-2: #10141c;
+  --orbit-text: #eef2f7;
+  --orbit-muted: #9aa4b2;
+  --orbit-line: #242a36;
+  --orbit-primary: #8ea1ff;
+  --orbit-primary-soft: #1b2447;
+  --orbit-danger: #ff6b63;
+  --orbit-success: #4ade80;
+  --orbit-warning: #fbbf24;
+  --orbit-shadow: 0 10px 30px rgba(0, 0, 0, .25);
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--orbit-bg);
+  color: var(--orbit-text);
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  letter-spacing: 0;
+  overflow: auto;
+}
+
+a {
+  color: var(--orbit-primary);
+}
+
+.orbit-login {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 32px;
+}
+
+.orbit-login-panel {
+  width: min(420px, 100%);
+  background: var(--orbit-panel);
+  border: 1px solid var(--orbit-line);
+  border-radius: 8px;
+  box-shadow: var(--orbit-shadow);
+  padding: 28px;
+}
+
+.orbit-shell {
+  display: grid;
+  grid-template-columns: 264px minmax(0, 1fr);
+  height: 100vh;
+  overflow: hidden;
+  transition: grid-template-columns .18s ease;
+}
+
+.orbit-sidebar {
+  background: var(--orbit-panel);
+  border-right: 1px solid var(--orbit-line);
+  padding: 12px;
+  overflow: hidden;
+  min-height: 0;
+  transition: width .18s ease, padding .18s ease, opacity .18s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.orbit-brand,
+.orbit-server-body {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.orbit-brand-mark {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  background: var(--orbit-primary-soft);
+  color: var(--orbit-primary);
+}
+
+.orbit-brand-title {
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.orbit-brand-subtitle,
+.orbit-muted {
+  color: var(--orbit-muted);
+}
+
+.orbit-sidebar-top {
+  flex: none;
+}
+
+.orbit-server-card {
+  border: 1px solid var(--orbit-line);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--orbit-panel);
+}
+
+.orbit-server-banner {
+  height: 58px;
+  background: linear-gradient(135deg, var(--orbit-primary-soft), var(--orbit-panel-2));
+  background-size: cover;
+  background-position: center;
+}
+
+.orbit-server-body {
+  position: relative;
+  padding: 10px;
+  min-height: 58px;
+}
+
+.orbit-server-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--orbit-panel);
+  border: 4px solid var(--orbit-panel);
+  display: grid;
+  place-items: center;
+  color: var(--orbit-primary);
+  flex: none;
+  margin-top: -28px;
+  box-shadow: 0 2px 8px rgba(31, 41, 55, .08);
+}
+
+.orbit-server-icon img {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+}
+
+.orbit-server-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.orbit-nav-toggle {
+  flex: none;
+}
+
+.orbit-sidebar-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.orbit-sidebar-user {
+  flex: none;
+  border: 1px solid var(--orbit-line);
+  border-radius: 8px;
+  background: var(--orbit-panel-2);
+  padding: 10px;
+}
+
+.orbit-sidebar-user .orbit-user {
+  width: 100%;
+  cursor: default;
+}
+
+.orbit-sidebar-user-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.orbit-sidebar-user-actions .button {
+  flex: 1;
+}
+
+.orbit-language-button {
+  min-width: 54px;
+  font-weight: 700 !important;
+}
+
+.orbit-sidebar .ui.accordion .title,
+.orbit-sidebar .ui.accordion .content a {
+  color: var(--orbit-text);
+}
+
+.orbit-nav-item {
+  display: flex !important;
+  align-items: center;
+  gap: 10px;
+  min-height: 38px;
+  padding: 10px 10px !important;
+  border-radius: 7px;
+  margin: 2px 0;
+}
+
+.orbit-nav-item.active,
+.orbit-nav-item:hover {
+  background: var(--orbit-primary-soft);
+  color: var(--orbit-primary) !important;
+}
+
+.orbit-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+  transition: margin-right .18s ease;
+}
+
+body.drawer-open .orbit-shell {
+  grid-template-columns: 0 minmax(0, 1fr);
+}
+
+body.drawer-open .orbit-sidebar {
+  width: 0;
+  opacity: 0;
+  padding-left: 0;
+  padding-right: 0;
+  border-right: 0;
+  overflow: hidden;
+}
+
+body.drawer-open.drawer-mode-side .orbit-main {
+  margin-right: var(--orbit-drawer-width);
+}
+
+.orbit-topbar {
+  height: 64px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 22px;
+  background: var(--orbit-panel);
+  border-bottom: 1px solid var(--orbit-line);
+  justify-content: space-between;
+}
+
+.orbit-page-title {
+  min-width: 160px;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.orbit-search {
+  flex: 1;
+  max-width: 520px;
+}
+
+.orbit-content {
+  flex: 1;
+  overflow: auto;
+  padding: 22px;
+  min-height: 0;
+}
+
+.orbit-degraded-banner {
+  background: #fff7ed;
+  border-bottom: 1px solid #fed7aa;
+  color: #9a3412;
+  padding: 10px 22px;
+  font-size: 13px;
+}
+
+[data-theme="dark"] .orbit-degraded-banner {
+  background: #2b1d12;
+  border-color: #7c2d12;
+  color: #fed7aa;
+}
+
+.orbit-section {
+  background: var(--orbit-panel);
+  border: 1px solid var(--orbit-line);
+  border-radius: 8px;
+  box-shadow: none;
+  margin-bottom: 16px;
+}
+
+.orbit-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--orbit-line);
+}
+
+.orbit-section-body {
+  padding: 16px;
+}
+
+.orbit-section > .ui.message,
+.orbit-section > .orbit-metric-strip {
+  margin-left: 16px;
+  margin-right: 16px;
+}
+
+.orbit-section > .ui.message {
+  margin-top: 16px;
+  margin-bottom: 0;
+}
+
+.orbit-section > .orbit-metric-strip {
+  margin-top: 16px;
+}
+
+.orbit-section > .orbit-tab-panel {
+  padding: 16px;
+}
+
+.orbit-metric-strip {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(120px, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.orbit-metric {
+  background: var(--orbit-panel);
+  border: 1px solid var(--orbit-line);
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.orbit-metric-head {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.orbit-metric-value {
+  font-size: 24px;
+  line-height: 1;
+  font-weight: 800;
+  margin-top: 6px;
+}
+
+.orbit-metric-sub {
+  margin-top: 6px;
+  color: var(--orbit-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.orbit-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--orbit-line);
+  background: var(--orbit-panel-2);
+}
+
+.orbit-filter-checkbox {
+  display: inline-flex !important;
+  align-items: flex-start;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 2px;
+}
+
+.orbit-filter-checkbox input[type="checkbox"] {
+  position: static !important;
+  opacity: 1 !important;
+  width: 17px;
+  height: 17px;
+  margin: 2px 0 0 0 !important;
+  flex: 0 0 17px;
+}
+
+.orbit-filter-checkbox label {
+  white-space: nowrap;
+  color: var(--orbit-text) !important;
+  padding-left: 0 !important;
+  margin: 0 !important;
+  line-height: 1.4 !important;
+}
+
+.orbit-filter-checkbox label::before,
+.orbit-filter-checkbox label::after {
+  display: none !important;
+  content: none !important;
+}
+
+.orbit-filter-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--orbit-muted);
+  font-size: 12px;
+}
+
+.orbit-toggle-group .button {
+  min-width: 86px;
+}
+
+.orbit-table-wrap {
+  width: 100%;
+  overflow: auto;
+}
+
+.orbit-table {
+  min-width: 860px;
+  border-collapse: separate !important;
+  border-spacing: 0;
+}
+
+.orbit-table thead th,
+.orbit-table tbody td {
+  padding: 10px 14px !important;
+  vertical-align: middle;
+}
+
+.orbit-table tbody td:first-child,
+.orbit-table thead th:first-child {
+  padding-left: 16px !important;
+}
+
+.orbit-table tbody td:last-child,
+.orbit-table thead th:last-child {
+  padding-right: 16px !important;
+}
+
+.orbit-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--orbit-panel);
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  box-shadow: inset 0 -1px 0 var(--orbit-line);
+}
+
+.orbit-table thead th.sorted {
+  color: var(--orbit-primary);
+}
+
+.orbit-th-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.orbit-th-label i {
+  color: var(--orbit-muted);
+  font-size: 11px;
+}
+
+.orbit-table thead th.sorted .orbit-th-label i {
+  color: var(--orbit-primary);
+}
+
+.orbit-resizer {
+  float: right;
+  width: 6px;
+  height: 18px;
+  cursor: col-resize;
+  opacity: .25;
+  border-right: 2px solid var(--orbit-muted);
+}
+
+.orbit-user {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.orbit-user-static {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+
+.orbit-user.avatar-only {
+  gap: 0;
+}
+
+.orbit-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex: none;
+}
+
+.orbit-avatar.large {
+  width: 64px;
+  height: 64px;
+}
+
+.orbit-user-text {
+  min-width: 0;
+}
+
+.orbit-user-name {
+  font-weight: 650;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.orbit-user-sub {
+  color: var(--orbit-muted);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.orbit-role-dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  margin-right: 6px;
+  background: var(--orbit-muted);
+}
+
+.orbit-avatar-stack {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  padding-left: 8px;
+}
+
+.orbit-avatar-stack .orbit-user,
+.orbit-avatar-stack .orbit-avatar-more {
+  margin-left: -8px;
+}
+
+.orbit-avatar-stack .orbit-user:first-child {
+  margin-left: 0;
+}
+
+.orbit-avatar-stack .orbit-avatar {
+  width: 28px;
+  height: 28px;
+  border: 2px solid var(--orbit-panel);
+  box-shadow: 0 0 0 1px var(--orbit-line);
+}
+
+.orbit-avatar-more {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--orbit-panel-2);
+  border: 2px solid var(--orbit-panel);
+  box-shadow: 0 0 0 1px var(--orbit-line);
+  color: var(--orbit-muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.orbit-role-cell,
+.orbit-role-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.orbit-role-cell > span:last-child {
+  display: grid;
+  min-width: 0;
+}
+
+.orbit-role-img,
+.orbit-role-pill img {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.orbit-role-pill {
+  border: 1px solid var(--orbit-line);
+  border-radius: 999px;
+  padding: 3px 8px;
+  margin: 2px 4px 2px 0;
+  background: var(--orbit-panel-2);
+  font-size: 12px;
+}
+
+.orbit-message-content {
+  display: block;
+  max-width: 680px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.orbit-message-content.deleted {
+  color: var(--orbit-text);
+  background: color-mix(in srgb, var(--orbit-danger) 7%, var(--orbit-panel));
+  border-left: 3px solid var(--orbit-danger);
+  border-radius: 6px;
+  padding: 6px 8px;
+}
+
+.orbit-attachment-preview {
+  display: inline-flex;
+  margin-top: 8px;
+  border: 1px solid var(--orbit-line);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--orbit-panel-2);
+  max-width: 220px;
+}
+
+.orbit-attachment-preview.compact {
+  max-width: 160px;
+}
+
+.orbit-attachment-preview img {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+}
+
+.orbit-attachment-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.orbit-attachment-card {
+  width: min(220px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border: 1px solid var(--orbit-line);
+  border-radius: 8px;
+  padding: 8px;
+  background: var(--orbit-panel-2);
+  color: var(--orbit-text);
+}
+
+.orbit-attachment-card.file {
+  width: auto;
+}
+
+.orbit-attachment-card img {
+  width: 100%;
+  border-radius: 6px;
+  display: block;
+  object-fit: cover;
+  background: var(--orbit-panel);
+}
+
+.orbit-attachment-card span {
+  font-size: 12px;
+  color: var(--orbit-muted);
+  overflow-wrap: anywhere;
+}
+
+.orbit-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  padding: 4px 9px;
+  font-size: 12px;
+  background: var(--orbit-panel-2);
+  border: 1px solid var(--orbit-line);
+}
+
+.orbit-status i {
+  font-size: 11px;
+}
+
+.orbit-status-dot,
+.orbit-live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: currentColor;
+  display: inline-block;
+  flex: 0 0 auto;
+}
+
+.orbit-status.has-pulse .orbit-status-dot,
+.orbit-live-stamp.is-pulse .orbit-live-dot {
+  animation: orbitPulseDot 1.2s ease-in-out infinite;
+}
+
+.orbit-status.success { color: var(--orbit-success); }
+.orbit-status.failed,
+.orbit-status.rejected { color: var(--orbit-danger); }
+.orbit-status.pending,
+.orbit-status.running,
+.orbit-status.partial { color: var(--orbit-warning); }
+
+.orbit-live-stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  line-height: 1.35;
+}
+
+.orbit-live-label {
+  font-variant-numeric: tabular-nums;
+}
+
+.orbit-live-ago {
+  color: var(--orbit-muted);
+  font-size: 11px;
+}
+
+.orbit-live-stamp .orbit-live-dot {
+  background: var(--orbit-muted);
+}
+
+.orbit-live-stamp.is-fresh .orbit-live-dot {
+  background: var(--orbit-success);
+}
+
+.orbit-live-stamp.is-warm .orbit-live-dot {
+  background: var(--orbit-warning);
+}
+
+.orbit-live-stamp.is-stale .orbit-live-dot {
+  background: var(--orbit-danger);
+}
+
+@keyframes orbitPulseDot {
+  0%, 100% {
+    opacity: 0.45;
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.25);
+  }
+}
+
+.orbit-context-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 8px 0;
+}
+
+.orbit-historical-note {
+  border-radius: 10px !important;
+  border: 1px solid rgba(88, 101, 242, .22) !important;
+  background: linear-gradient(135deg, rgba(88, 101, 242, .10), rgba(97, 201, 255, .08)) !important;
+}
+
+.orbit-info-tip {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 5px;
+  color: var(--orbit-muted);
+  cursor: help;
+  vertical-align: middle;
+}
+
+.orbit-info-tip:hover {
+  color: var(--orbit-accent);
+}
+
+.orbit-empty,
+.orbit-error,
+.orbit-loading {
+  padding: 28px;
+  text-align: center;
+  color: var(--orbit-muted);
+}
+
+.orbit-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100vh;
+  width: var(--orbit-drawer-width);
+  background: var(--orbit-panel);
+  border-left: 1px solid var(--orbit-line);
+  box-shadow: var(--orbit-shadow);
+  z-index: 1000;
+  transform: translateX(105%);
+  transition: transform .18s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.orbit-drawer.open {
+  transform: translateX(0);
+}
+
+.orbit-drawer.as-modal {
+  top: 7vh;
+  left: 50%;
+  right: auto;
+  height: 86vh;
+  width: min(920px, calc(100vw - 32px));
+  border: 1px solid var(--orbit-line);
+  border-radius: 8px;
+  transform: translate(-50%, 110vh);
+}
+
+.orbit-drawer.as-modal.open {
+  transform: translate(-50%, 0);
+}
+
+.orbit-drawer-header {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--orbit-line);
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  min-height: 54px;
+}
+
+.orbit-drawer-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.orbit-drawer.as-modal .orbit-drawer-actions {
+  order: 2;
+  margin-left: auto;
+}
+
+.orbit-drawer.as-modal #drawerTitle {
+  order: 1;
+}
+
+.orbit-drawer-body {
+  overflow: auto;
+  padding: 16px;
+  min-height: 0;
+}
+
+.orbit-drawer .orbit-table {
+  min-width: 100%;
+}
+
+.orbit-drawer-tabs {
+  position: sticky;
+  top: -16px;
+  z-index: 8;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 12px 0 10px;
+  margin: 0 0 12px;
+  background: var(--orbit-panel);
+  border-bottom: 1px solid var(--orbit-line);
+}
+
+.orbit-drawer-tabs .button {
+  border-radius: 999px !important;
+}
+
+.orbit-view-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--orbit-line);
+  background: var(--orbit-panel);
+}
+
+.orbit-view-tabs .button {
+  border-radius: 999px !important;
+}
+
+.orbit-page-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.orbit-page-tabs .button {
+  border-radius: 999px !important;
+}
+
+.orbit-section-body-tight {
+  display: grid;
+  gap: 16px;
+}
+
+.orbit-section-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.orbit-tab-panel {
+  display: none;
+}
+
+.orbit-tab-panel.active {
+  display: block;
+}
+
+.orbit-drawer-section {
+  margin-bottom: 16px;
+}
+
+.orbit-bag-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.orbit-bag-member {
+  min-width: 240px;
+}
+
+.orbit-bag-history-note {
+  margin-bottom: 16px !important;
+}
+
+.orbit-bag-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.orbit-bag-snapshot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.orbit-bag-filter {
+  margin-bottom: 12px;
+}
+
+.orbit-bag-toggle-group {
+  align-items: center;
+}
+
+.orbit-bag-note {
+  white-space: normal;
+  line-height: 1.45;
+}
+
+.orbit-profile-popover {
+  position: fixed;
+  z-index: 1200;
+  width: 340px;
+  background: var(--orbit-panel);
+  border: 1px solid var(--orbit-line);
+  border-radius: 8px;
+  box-shadow: var(--orbit-shadow);
+  padding: 0;
+  display: none;
+  overflow: auto;
+}
+
+.orbit-compact-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.orbit-json {
+  max-height: 360px;
+  overflow: auto;
+  background: var(--orbit-panel-2);
+  border: 1px solid var(--orbit-line);
+  border-radius: 7px;
+  padding: 10px;
+  font-size: 12px;
+}
+
+.orbit-json-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.orbit-json-chip {
+  border: 1px solid var(--orbit-line);
+  border-radius: 999px;
+  padding: 3px 7px;
+  background: var(--orbit-panel-2);
+  font-size: 12px;
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.orbit-discord-card {
+  border: 1px solid var(--orbit-line);
+  border-radius: 8px;
+  background: var(--orbit-panel);
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+
+.orbit-discord-card.compact {
+  border: 0;
+  border-radius: 0;
+  margin-bottom: 0;
+}
+
+.orbit-discord-banner {
+  height: 112px;
+  background-size: cover !important;
+  background-position: center !important;
+}
+
+.orbit-discord-card.compact .orbit-discord-banner {
+  height: 92px;
+}
+
+.orbit-discord-body {
+  position: relative;
+  padding: 54px 14px 14px;
+}
+
+.orbit-discord-avatar-shell {
+  position: absolute;
+  top: -42px;
+  left: 14px;
+  width: 84px;
+  height: 84px;
+}
+
+.orbit-discord-avatar {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 6px solid var(--orbit-panel);
+  background: var(--orbit-panel);
+}
+
+.orbit-discord-avatar-current {
+  inset: auto -2px 4px auto;
+  width: 30px;
+  height: 30px;
+  border-width: 3px;
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--orbit-text) 18%, transparent);
+}
+
+.orbit-discord-card.compact .orbit-discord-avatar-shell {
+  width: 72px;
+  height: 72px;
+  top: -36px;
+}
+
+.orbit-discord-card.compact .orbit-discord-avatar {
+  border-width: 5px;
+}
+
+.orbit-discord-card.compact .orbit-discord-avatar-current {
+  width: 26px;
+  height: 26px;
+  right: -2px;
+  bottom: 2px;
+  border-width: 3px;
+}
+
+.orbit-discord-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.orbit-discord-name {
+  font-size: 18px;
+  line-height: 1.2;
+  font-weight: 800;
+}
+
+.orbit-discord-name-note,
+.orbit-profile-note {
+  margin-top: 4px;
+  color: var(--orbit-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.orbit-badge-row {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  color: var(--orbit-primary);
+}
+
+.orbit-badge-row.align-start {
+  justify-content: flex-start;
+}
+
+.orbit-discord-meta,
+.orbit-role-list,
+.orbit-profile-facts {
+  margin-top: 10px;
+}
+
+.orbit-profile-facts strong {
+  display: block;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.orbit-role-hero {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border: 1px solid var(--orbit-line);
+  border-radius: 8px;
+  padding: 14px;
+  margin-bottom: 14px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--role-color) 14%, transparent), transparent);
+}
+
+.orbit-role-hero.gradient {
+  background: linear-gradient(115deg, color-mix(in srgb, var(--role-color) 22%, transparent), color-mix(in srgb, var(--role-color-2) 18%, transparent), transparent);
+}
+
+.orbit-role-hero.holographic {
+  background: linear-gradient(115deg, color-mix(in srgb, var(--role-color) 24%, transparent), color-mix(in srgb, var(--role-color-2) 20%, transparent), color-mix(in srgb, var(--role-color-3) 18%, transparent), transparent);
+}
+
+.orbit-role-icon {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--role-color);
+  color: #fff;
+  font-size: 22px;
+  flex: none;
+}
+
+.orbit-role-icon img {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.orbit-pill-list {
+  margin-bottom: 12px;
+}
+
+.orbit-toggle-menu.ui.menu {
+  margin: 0;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.orbit-toggle-menu.ui.menu .item {
+  justify-content: center;
+  font-weight: 700;
+}
+
+.orbit-picker-stack {
+  display: grid;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.orbit-picker-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--orbit-muted);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.orbit-picker-summary,
+.orbit-picker-results,
+.orbit-user-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.orbit-picker-summary {
+  min-height: 40px;
+}
+
+.orbit-picker-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  border: 1px solid var(--orbit-line);
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: var(--orbit-panel-2);
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--orbit-primary) 6%, transparent);
+}
+
+.orbit-picker-chip img {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.orbit-picker-chip strong {
+  display: block;
+  font-size: 13px;
+  line-height: 1.05;
+}
+
+.orbit-picker-chip span {
+  display: block;
+  font-size: 11px;
+  color: var(--orbit-muted);
+  line-height: 1.05;
+}
+
+.orbit-picker-chip button {
+  border: 0;
+  background: transparent;
+  color: var(--orbit-muted);
+  cursor: pointer;
+  padding: 0;
+}
+
+.orbit-picker-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--orbit-line);
+  border-radius: 12px;
+  padding: 8px 10px;
+  background: var(--orbit-panel);
+  cursor: pointer;
+}
+
+.orbit-picker-option img {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.orbit-picker-option strong {
+  display: block;
+  font-size: 13px;
+  line-height: 1.05;
+}
+
+.orbit-picker-option span {
+  display: block;
+  font-size: 11px;
+  color: var(--orbit-muted);
+  line-height: 1.05;
+}
+
+.orbit-channel-board {
+  background: var(--orbit-panel);
+}
+
+.orbit-channel-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.orbit-time-machine-bar {
+  position: sticky;
+  top: 12px;
+  z-index: 9;
+  margin: 12px 0 14px;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--orbit-primary) 32%, var(--orbit-line));
+  border-radius: 12px;
+  background:
+    radial-gradient(circle at 12% 0%, color-mix(in srgb, var(--orbit-primary) 18%, transparent), transparent 34%),
+    linear-gradient(135deg, color-mix(in srgb, var(--orbit-primary-soft) 82%, var(--orbit-panel)), var(--orbit-panel));
+  box-shadow: 0 12px 30px color-mix(in srgb, var(--orbit-primary) 12%, transparent);
+}
+
+.orbit-time-machine-head,
+.orbit-time-machine-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.orbit-time-machine-controls {
+  margin-top: 12px;
+}
+
+.orbit-time-input {
+  border: 1px solid var(--orbit-line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: var(--orbit-panel);
+  color: var(--orbit-text);
+}
+
+.orbit-time-machine-zoom {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: min(260px, 100%);
+  color: var(--orbit-muted);
+  font-size: 12px;
+}
+
+.orbit-time-machine-zoom input {
+  width: min(180px, 45vw);
+  accent-color: var(--orbit-primary);
+}
+
+.orbit-time-ruler-wrap {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.orbit-time-ruler {
+  position: relative;
+  height: 78px;
+  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, var(--orbit-primary) 28%, var(--orbit-line));
+  overflow: hidden;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  isolation: isolate;
+  contain: layout paint;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--orbit-primary-soft) 82%, transparent), color-mix(in srgb, var(--orbit-panel) 88%, transparent)),
+    repeating-linear-gradient(90deg, transparent 0 21px, color-mix(in srgb, var(--orbit-primary) 18%, transparent) 21px 22px);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, #fff 70%, transparent), 0 14px 34px color-mix(in srgb, var(--orbit-primary) 10%, transparent);
+}
+
+.orbit-time-ruler.dragging {
+  cursor: grabbing;
+}
+
+.orbit-time-ruler-density,
+.orbit-time-ruler-track {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  will-change: transform;
+  backface-visibility: hidden;
+  transform: translate3d(0, 0, 0);
+  pointer-events: none;
+}
+
+.orbit-time-ruler-density {
+  opacity: 0.86;
+  z-index: 2;
+}
+
+.orbit-time-ruler-track {
+  z-index: 1;
+  background-image:
+    linear-gradient(90deg, color-mix(in srgb, var(--orbit-text) 13%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--orbit-text) 23%, transparent) 2px, transparent 2px);
+  background-size: 24px 100%, 120px 100%;
+  background-position: 0 0, 0 0;
+  mix-blend-mode: multiply;
+  opacity: 0.72;
+}
+
+.orbit-event-tick {
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  width: 2px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--orbit-primary) 82%, #fff);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--orbit-primary) 55%, transparent);
+}
+
+.orbit-time-ruler-center {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  z-index: 3;
+  transform: translateX(-50%);
+  display: grid;
+  grid-template-rows: 1fr auto;
+  justify-items: center;
+  pointer-events: none;
+}
+
+.orbit-time-ruler-center span {
+  width: 3px;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(180deg, transparent, var(--orbit-primary), transparent);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--orbit-primary) 60%, transparent);
+}
+
+.orbit-time-ruler-center strong {
+  margin: 0 0 5px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--orbit-panel) 88%, transparent);
+  color: var(--orbit-primary);
+  font-size: 10px;
+  letter-spacing: .08em;
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--orbit-primary) 12%, transparent);
+}
+
+.orbit-time-ruler-labels {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 8px;
+  color: var(--orbit-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.orbit-time-ruler-labels span:nth-child(2) {
+  color: var(--orbit-text);
+  font-weight: 700;
+}
+
+.orbit-time-machine-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  align-items: center;
+  margin-top: 10px;
+  color: var(--orbit-muted);
+  font-size: 12px;
+}
+
+.orbit-time-machine-legend-title {
+  color: var(--orbit-text);
+  font-weight: 700;
+}
+
+.orbit-time-machine-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.orbit-legend-swatch {
+  display: inline-block;
+  flex: none;
+}
+
+.orbit-legend-swatch-density {
+  width: 12px;
+  height: 12px;
+  border-radius: 4px;
+  background: linear-gradient(180deg, rgba(88, 118, 255, 0.9), rgba(97, 201, 255, 0.45));
+}
+
+.orbit-legend-swatch-join,
+.orbit-legend-swatch-leave,
+.orbit-legend-swatch-other {
+  width: 3px;
+  height: 16px;
+  border-radius: 999px;
+}
+
+.orbit-legend-swatch-join {
+  background: rgba(16, 185, 129, .92);
+  box-shadow: 0 0 10px rgba(16, 185, 129, .35);
+}
+
+.orbit-legend-swatch-leave {
+  background: rgba(239, 68, 68, .92);
+  box-shadow: 0 0 10px rgba(239, 68, 68, .28);
+}
+
+.orbit-legend-swatch-other {
+  background: rgba(59, 130, 246, .95);
+  box-shadow: 0 0 10px rgba(59, 130, 246, .28);
+}
+
+.orbit-voice-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 8px;
+}
+
+.orbit-time-machine-dashboard {
+  top: 8px;
+  z-index: 12;
+}
+
+.orbit-time-machine-freshness {
+  margin: 12px 0 14px;
+}
+
+.orbit-freshness-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 10px;
+}
+
+.orbit-freshness-card {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--orbit-line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--orbit-panel) 88%, var(--orbit-primary-soft));
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--orbit-primary) 6%, transparent);
+}
+
+.orbit-freshness-card.strong {
+  border-color: color-mix(in srgb, var(--orbit-primary) 34%, var(--orbit-line));
+  background:
+    radial-gradient(circle at 18% 0%, color-mix(in srgb, var(--orbit-primary) 16%, transparent), transparent 35%),
+    var(--orbit-panel);
+}
+
+.orbit-freshness-card strong,
+.orbit-freshness-card span,
+.orbit-freshness-card small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.orbit-freshness-card small {
+  color: var(--orbit-muted);
+}
+
+.orbit-time-machine-coverage {
+  margin: 12px 0 14px;
+}
+
+.orbit-coverage-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.orbit-coverage-card {
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--orbit-line);
+  background: color-mix(in srgb, var(--orbit-panel) 92%, var(--orbit-primary-soft));
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--orbit-primary) 6%, transparent);
+}
+
+.orbit-coverage-card ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  color: var(--orbit-muted);
+  display: grid;
+  gap: 6px;
+}
+
+.orbit-table-meta {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.orbit-table-meta strong,
+.orbit-event-title,
+.orbit-event-field strong {
+  overflow-wrap: anywhere;
+}
+
+.orbit-event-detail {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  max-width: 440px;
+}
+
+.orbit-event-title {
+  font-weight: 700;
+}
+
+.orbit-event-field {
+  display: grid;
+  gap: 2px;
+}
+
+.orbit-event-field span {
+  color: var(--orbit-muted);
+  overflow-wrap: anywhere;
+}
+
+.orbit-inline-summary-item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
+  border: 1px solid var(--orbit-line);
+  border-radius: 999px;
+  padding: 5px 10px;
+  background: var(--orbit-panel-2);
+  font-size: 12px;
+}
+
+.orbit-inline-summary-item strong {
+  font-size: 14px;
+}
+
+.orbit-earn-rule-list {
+  display: grid;
+  gap: 12px;
+}
+
+.orbit-earn-rule {
+  border: 1px solid var(--orbit-line);
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 12% 0%, color-mix(in srgb, var(--orbit-primary) 10%, transparent), transparent 30%),
+    var(--orbit-panel);
+  padding: 14px;
+  box-shadow: 0 10px 26px color-mix(in srgb, var(--orbit-primary) 5%, transparent);
+}
+
+.orbit-earn-rule-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.orbit-earn-rule-head strong {
+  display: block;
+  font-size: 16px;
+}
+
+.orbit-earn-rule-head span {
+  color: var(--orbit-muted);
+  font-size: 12px;
+}
+
+.orbit-earn-rule-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+}
+
+.orbit-earn-advanced {
+  margin-top: 14px;
+  padding: 16px;
+  border-color: color-mix(in srgb, var(--orbit-primary) 16%, var(--orbit-line));
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--orbit-primary-soft) 30%, transparent), transparent 65%),
+    color-mix(in srgb, var(--orbit-panel) 92%, white 8%);
+}
+
+.orbit-earn-advanced-caption {
+  color: var(--orbit-muted);
+  font-size: 12px;
+  line-height: 1.5;
+  max-width: 760px;
+}
+
+.orbit-earn-advanced .fields {
+  display: grid !important;
+  gap: 12px;
+  margin: 0 !important;
+}
+
+.orbit-earn-advanced .four.fields {
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+}
+
+.orbit-earn-advanced .three.fields {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.orbit-earn-advanced .fields > .field {
+  min-width: 0;
+  width: auto !important;
+  margin: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+.orbit-earn-advanced.ui.form .field > label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 7px;
+}
+
+.orbit-earn-advanced .orbit-info-tip {
+  margin-left: 0;
+}
+
+.orbit-earn-advanced .ui.dropdown,
+.orbit-earn-advanced input,
+.orbit-earn-advanced textarea {
+  width: 100%;
+}
+
+.orbit-earn-advanced textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+
+.orbit-earn-advanced .ui.dropdown {
+  min-width: 0;
+}
+
+.orbit-earn-rule-grid-wide {
+  grid-column: 1 / -1;
+}
+
+.orbit-earn-rule-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.orbit-channel-group {
+  position: relative;
+  border-top: 1px solid var(--orbit-line);
+}
+
+.orbit-channel-group:first-child {
+  border-top: 0;
+}
+
+.orbit-channel-category {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  background: color-mix(in srgb, var(--orbit-panel) 92%, var(--orbit-primary-soft));
+  border-bottom: 1px solid var(--orbit-line);
+}
+
+.orbit-channel-category-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-weight: 800;
+}
+
+.orbit-channel-row {
+  display: grid;
+  grid-template-columns: 36px minmax(240px, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  min-height: 54px;
+  padding: 9px 16px;
+  border-bottom: 1px solid var(--orbit-line);
+  cursor: pointer;
+}
+
+.orbit-channel-row:hover {
+  background: var(--orbit-panel-2);
+}
+
+.orbit-channel-type-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+  color: var(--orbit-muted);
+  background: var(--orbit-panel-2);
+  border: 1px solid var(--orbit-line);
+}
+
+.orbit-channel-name {
+  min-width: 0;
+}
+
+.orbit-channel-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.orbit-channel-title-row strong {
+  display: block;
+  flex: 0 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.orbit-channel-title-row .orbit-avatar-stack {
+  flex: 0 0 auto;
+  padding-left: 2px;
+}
+
+.orbit-channel-presence-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 6px;
+}
+
+.orbit-channel-presence-icon {
+  width: 18px;
+  color: var(--orbit-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+
+.orbit-channel-presence-row .orbit-avatar-stack {
+  padding-left: 0;
+}
+
+.orbit-avatar-stack.typing .orbit-avatar {
+  box-shadow: 0 0 0 1px var(--orbit-line), 0 0 0 3px color-mix(in srgb, var(--orbit-primary) 12%, transparent);
+}
+
+.orbit-channel-empty {
+  padding: 18px 16px;
+}
+
+.orbit-channel-state {
+  justify-self: end;
+}
+
+.orbit-channel-sidecar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  min-width: 0;
+}
+
+.orbit-live-duration {
+  font-variant-numeric: tabular-nums;
+}
+
+.orbit-profile-context {
+  margin: 10px 0 0;
+  border: 1px solid var(--orbit-line);
+  border-radius: 8px;
+  padding: 9px;
+  background: var(--orbit-panel-2);
+}
+
+.orbit-permission-toggle {
+  margin-bottom: 10px;
+}
+
+.orbit-color-swatches {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.orbit-color-swatch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--orbit-line);
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+.orbit-color-swatch i {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--swatch-color);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .12);
+}
+
+.orbit-change-list {
+  display: grid;
+  gap: 5px;
+}
+
+.orbit-change-item {
+  border: 1px solid var(--orbit-line);
+  border-radius: 7px;
+  padding: 6px 8px;
+  background: var(--orbit-panel-2);
+}
+
+.gacha-tier-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(170px, 1fr));
+  gap: 12px;
+}
+
+.gacha-tier-card,
+.gacha-timeline-row {
+  border: 1px solid var(--orbit-line);
+  border-radius: 12px;
+  background: var(--orbit-panel-2);
+}
+
+.gacha-tier-card {
+  padding: 12px;
+  box-shadow: inset 0 3px 0 color-mix(in srgb, var(--tier-accent) 60%, transparent);
+}
+
+.gacha-tier-card-head {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.gacha-tier-card-head img {
+  width: 46px;
+  height: 46px;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 10px rgba(31, 41, 55, .14));
+}
+
+.gacha-tier-card-head strong,
+.gacha-tier-card-head span {
+  display: block;
+}
+
+.gacha-tier-card-head span {
+  color: var(--orbit-muted);
+  font-size: 12px;
+}
+
+.gacha-prize-list {
+  display: grid;
+  gap: 12px;
+  overflow: visible;
+}
+
+.gacha-prize-tier-group {
+  display: grid;
+  gap: 10px;
+  overflow: visible;
+}
+
+.gacha-prize-tier-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 2px 0;
+}
+
+.gacha-prize-tier-group-head > div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.gacha-prize-tier-group-head strong {
+  display: block;
+  font-size: 14px;
+}
+
+.gacha-prize-tier-group-head span {
+  display: block;
+  color: var(--orbit-muted);
+  font-size: 12px;
+}
+
+.gacha-prize-row {
+  border: 1px solid var(--orbit-line);
+  border-radius: 14px;
+  background: var(--orbit-panel-2);
+  overflow: visible;
+  position: relative;
+}
+
+.gacha-prize-row-main {
+  display: grid;
+  gap: 4px;
+  padding: 16px 18px 12px;
+}
+
+.gacha-prize-row-title {
+  font-size: 18px;
+  line-height: 1.25;
+  font-weight: 700;
+}
+
+.gacha-prize-row > .gacha-prize-row-editor {
+  margin: 0 !important;
+  padding: 16px 18px 18px;
+  border-top: 1px solid var(--orbit-line);
+}
+
+.gacha-prize-row.is-open {
+  z-index: 20;
+}
+
+.gacha-rate-overview-shell {
+  display: grid;
+  gap: 14px;
+}
+
+.gacha-rate-overview-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--orbit-line);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--orbit-primary-soft) 16%, var(--orbit-panel));
+}
+
+.gacha-rate-overview-note > div {
+  display: grid;
+  gap: 4px;
+}
+
+.gacha-rate-overview-note strong {
+  display: block;
+  font-size: 14px;
+}
+
+.gacha-rate-overview-note span {
+  color: var(--orbit-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.gacha-rate-overview-total {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 128px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--orbit-primary) 12%, var(--orbit-panel));
+  color: var(--orbit-text) !important;
+  font-weight: 700;
+}
+
+.gacha-rate-overview-total.is-warning {
+  background: color-mix(in srgb, var(--orbit-danger) 14%, var(--orbit-panel));
+}
+
+.gacha-rate-overview-totals {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.gacha-rate-overview-stack {
+  display: grid;
+  gap: 14px;
+}
+
+.gacha-rate-tier-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--orbit-line);
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--gacha-tier-accent, var(--orbit-primary)) 10%, transparent), transparent 44%),
+    var(--orbit-panel-2);
+  box-shadow: inset 0 3px 0 color-mix(in srgb, var(--gacha-tier-accent, var(--orbit-primary)) 55%, transparent);
+}
+
+.gacha-rate-tier-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 340px);
+  gap: 12px;
+  align-items: start;
+}
+
+.gacha-rate-tier-copy {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+}
+
+.gacha-rate-tier-thumb {
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--gacha-tier-accent, var(--orbit-primary)) 12%, var(--orbit-panel));
+}
+
+.gacha-rate-tier-thumb img {
+  width: 38px;
+  height: 38px;
+  object-fit: contain;
+}
+
+.gacha-rate-tier-copy strong,
+.gacha-rate-tier-copy span {
+  display: block;
+}
+
+.gacha-rate-tier-copy strong {
+  font-size: 15px;
+}
+
+.gacha-rate-tier-copy span {
+  margin-top: 4px;
+  color: var(--orbit-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.gacha-rate-tier-input,
+.gacha-rate-prize-input,
+.gacha-rate-prize-output {
+  display: grid;
+  gap: 6px;
+}
+
+.gacha-rate-tier-controls,
+.gacha-rate-prize-controls {
+  display: grid;
+  gap: 10px;
+}
+
+.gacha-rate-tier-control-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.gacha-rate-tier-input label,
+.gacha-rate-prize-input label,
+.gacha-rate-prize-output label {
+  color: var(--orbit-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+}
+
+.gacha-rate-tier-input input,
+.gacha-rate-prize-input input {
+  width: 100%;
+}
+
+.gacha-rate-tier-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.gacha-rate-meta-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--orbit-panel) 84%, white 16%);
+  color: var(--orbit-text);
+  font-size: 12px;
+}
+
+.gacha-rate-meta-pill.is-warning {
+  background: color-mix(in srgb, var(--orbit-danger) 14%, var(--orbit-panel));
+}
+
+.gacha-rate-prize-list {
+  display: grid;
+  gap: 8px;
+}
+
+.gacha-rate-prize-row {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) minmax(300px, 430px);
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--gacha-tier-accent, var(--orbit-line)) 18%, var(--orbit-line));
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--orbit-panel) 86%, white 14%);
+}
+
+.gacha-rate-prize-row.is-paused {
+  opacity: .72;
+}
+
+.gacha-rate-prize-thumb {
+  width: 64px;
+  height: 64px;
+  display: grid;
+  place-items: center;
+}
+
+.gacha-rate-prize-copy {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.gacha-rate-prize-copy strong,
+.gacha-rate-prize-copy span {
+  display: block;
+}
+
+.gacha-rate-prize-copy strong {
+  font-size: 14px;
+}
+
+.gacha-rate-prize-copy span {
+  color: var(--orbit-muted);
+  font-size: 12px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.gacha-rate-prize-flags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.gacha-rate-toggle-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.gacha-rate-prize-control-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.gacha-rate-prize-output {
+  text-align: right;
+}
+
+.gacha-rate-prize-output strong {
+  display: block;
+  font-size: 16px;
+}
+
+.gacha-rate-prize-empty {
+  padding: 14px;
+  border: 1px dashed var(--orbit-line);
+  border-radius: 12px;
+  color: var(--orbit-muted);
+  text-align: center;
+}
+
+.gacha-prize-row[draggable="true"] {
+  cursor: grab;
+}
+
+.gacha-prize-drag {
+  color: var(--gacha-tier-accent, var(--orbit-muted));
+  display: grid;
+  place-items: center;
+  font-size: 15px;
+}
+
+.gacha-prize-summary {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 22px 78px 16px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 14px;
+  border: 0;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--orbit-panel) 88%, #fff 12%);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.gacha-prize-summary-caret {
+  color: var(--gacha-tier-accent, var(--orbit-muted));
+  display: grid;
+  place-items: center;
+  width: 16px;
+}
+
+.gacha-prize-row.is-open .gacha-prize-summary-caret {
+  transform: none;
+}
+
+.gacha-role-config-row .gacha-prize-summary {
+  grid-template-columns: 22px 78px 16px minmax(0, 1fr) auto;
+}
+
+.gacha-role-config-row + .gacha-role-config-row {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed color-mix(in srgb, var(--gacha-tier-accent, var(--orbit-line)) 24%, var(--orbit-line));
+}
+
+.gacha-role-config-preview-list {
+  display: grid;
+  gap: 8px;
+  padding: 0 14px 14px 75px;
+  border-top: 1px dashed color-mix(in srgb, var(--orbit-line) 82%, transparent);
+}
+
+.gacha-role-config-row.is-open .gacha-role-config-preview-list {
+  display: none;
+}
+
+.gacha-role-config-preview-row {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.gacha-role-config-preview-thumb {
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+}
+
+.gacha-role-config-preview-copy {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.gacha-role-config-preview-copy strong {
+  display: block;
+  font-size: 13px;
+}
+
+.gacha-role-config-preview-copy span {
+  display: block;
+  font-size: 12px;
+  color: var(--orbit-muted);
+  overflow-wrap: anywhere;
+}
+
+.gacha-role-config-preview-meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.gacha-prize-thumb {
+  width: 78px;
+  height: 78px;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  border: 1px solid var(--orbit-line);
+  background:
+    radial-gradient(circle at 50% 35%, rgba(255, 255, 255, .94), rgba(255, 255, 255, .42)),
+    var(--orbit-panel);
+  padding: 8px;
+}
+
+.gacha-prize-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.gacha-prize-thumb img,
+.gacha-prize-thumb .gacha-prize-role-fallback,
+.gacha-role-config-preview-thumb img,
+.gacha-role-config-preview-thumb .gacha-prize-role-fallback,
+.gacha-role-config-entry-thumb img,
+.gacha-role-config-entry-thumb .gacha-prize-role-fallback,
+.gacha-asset-option-thumb img,
+.gacha-asset-option-thumb video {
+  width: 100%;
+  height: 100%;
+}
+
+.gacha-prize-thumb-media,
+.gacha-prize-art-media {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.gacha-prize-role-fallback {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 50% 28%, rgba(255, 255, 255, .96), rgba(255, 255, 255, .52)),
+    linear-gradient(180deg, color-mix(in srgb, var(--orbit-primary) 16%, transparent), color-mix(in srgb, var(--orbit-panel) 90%, transparent));
+  color: var(--orbit-primary);
+  font-size: 24px;
+}
+
+.gacha-prize-copy {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.gacha-prize-copy strong {
+  display: block;
+  font-size: 15px;
+}
+
+.gacha-prize-copy span {
+  display: block;
+  color: var(--orbit-muted);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gacha-prize-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.gacha-prize-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 9px;
+  border-radius: 999px;
+  border: 1px solid var(--orbit-line);
+  background: var(--orbit-panel);
+  color: var(--orbit-muted);
+  font-size: 11px;
+}
+
+.gacha-prize-chip.is-live {
+  color: var(--orbit-success);
+}
+
+.gacha-prize-chip.is-dim {
+  color: var(--orbit-text);
+}
+
+.gacha-prize-editor {
+  display: none;
+  padding: 0 14px 14px 48px;
+  border-top: 1px solid var(--orbit-line);
+  overflow: visible;
+}
+
+.gacha-prize-row.is-open .gacha-prize-editor {
+  display: block;
+}
+
+.gacha-prize-editor-grid {
+  display: grid;
+  gap: 12px;
+  padding-top: 12px;
+  padding-left: 30px;
+}
+
+.gacha-prize-editor-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.gacha-prize-editor-art {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.gacha-prize-editor-artbox {
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+}
+
+.gacha-prize-editor-artbox img {
+  width: 88px;
+  height: 88px;
+  object-fit: contain;
+  border-radius: 14px;
+  border: 1px solid var(--orbit-line);
+  background:
+    radial-gradient(circle at 50% 35%, rgba(255, 255, 255, .94), rgba(255, 255, 255, .42)),
+    var(--orbit-panel);
+  padding: 8px;
+}
+
+.gacha-prize-editor-artbox .gacha-prize-role-fallback {
+  width: 88px;
+  height: 88px;
+}
+
+.gacha-prize-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.gacha-prize-fields textarea {
+  resize: vertical;
+}
+
+.gacha-prize-fieldset {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--orbit-line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--orbit-panel) 78%, transparent);
+  overflow: visible;
+}
+
+.gacha-prize-fieldset + .gacha-prize-fieldset {
+  margin-top: 10px;
+}
+
+.gacha-prize-fieldset-title {
+  color: var(--orbit-muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.shop-setting-list {
+  display: grid;
+  gap: 12px;
+}
+
+.shop-setting-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--orbit-line);
+  border-radius: 12px;
+  background: var(--orbit-panel-2);
+}
+
+.shop-setting-card-head,
+.shop-product-summary,
+.shop-setting-subsection-head,
+.shop-option-main,
+.shop-product-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.shop-setting-card-head,
+.shop-setting-subsection-head,
+.shop-product-actions {
+  justify-content: space-between;
+}
+
+.shop-unit-preview,
+.shop-product-summary-copy {
+  min-width: 0;
+}
+
+.shop-unit-preview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.shop-unit-preview strong,
+.shop-unit-preview span,
+.shop-product-summary-copy strong,
+.shop-product-summary-copy span {
+  display: block;
+}
+
+.shop-unit-preview span,
+.shop-product-summary-copy span {
+  color: var(--orbit-muted);
+  font-size: 12px;
+}
+
+.shop-unit-icon {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--orbit-primary) 10%, var(--orbit-panel));
+  color: var(--orbit-primary);
+  font-size: 16px;
+}
+
+.shop-setting-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.shop-setting-grid.ui.form .field {
+  margin: 0;
+}
+
+.shop-setting-wide {
+  grid-column: 1 / -1;
+}
+
+.shop-config-fold {
+  margin: 10px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--orbit-line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--orbit-panel) 92%, white);
+}
+
+.shop-config-fold summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--orbit-text);
+  font-weight: 700;
+  cursor: pointer;
+  user-select: none;
+}
+
+.shop-config-fold summary::-webkit-details-marker {
+  display: none;
+}
+
+.shop-config-fold summary::after {
+  content: "\f107";
+  margin-left: auto;
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
+  color: var(--orbit-muted);
+  transition: transform 0.16s ease;
+}
+
+.shop-config-fold[open] summary::after {
+  transform: rotate(180deg);
+}
+
+.shop-config-fold .fields:first-of-type {
+  margin-top: 12px;
+}
+
+.shop-gift-unit-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.shop-gift-unit-row {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--orbit-line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--orbit-panel) 84%, white);
+}
+
+.shop-gift-unit-row input[type="number"] {
+  width: 100%;
+}
+
+.shop-product-summary {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr) auto;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--orbit-line);
+}
+
+.shop-product-thumb {
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+}
+
+.shop-product-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.shop-product-status {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.shop-setting-subsection {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px dashed var(--orbit-line);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--orbit-panel) 76%, transparent);
+}
+
+.shop-option-list {
+  display: grid;
+  gap: 10px;
+}
+
+.shop-option-row {
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--orbit-line);
+  border-radius: 9px;
+  background: var(--orbit-panel);
+}
+
+.shop-option-main {
+  flex-wrap: wrap;
+}
+
+.shop-option-main .field {
+  min-width: 150px;
+  flex: 1 1 160px;
+  margin: 0 !important;
+}
+
+.shop-price-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.shop-price-grid .field {
+  margin: 0 !important;
+}
+
+.shop-product-card .ui.checkbox {
+  min-height: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.shop-product-card .ui.checkbox input,
+.shop-setting-card .ui.checkbox input {
+  position: static !important;
+  opacity: 1 !important;
+  margin: 0 !important;
+}
+
+.shop-product-card .ui.checkbox span,
+.shop-setting-card .ui.checkbox span {
+  line-height: 1.2;
+}
+
+@media (max-width: 900px) {
+  .shop-setting-grid,
+  .shop-price-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .shop-setting-grid,
+  .shop-price-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .shop-product-summary {
+    grid-template-columns: 48px minmax(0, 1fr);
+  }
+
+  .shop-product-status {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+}
+
+.gacha-prize-optional-row {
+  display: grid;
+  gap: 8px;
+}
+
+.gacha-prize-optional-row > .ui.checkbox {
+  margin: 0;
+}
+
+.gacha-prize-optional-row [hidden],
+.gacha-prize-fields [hidden] {
+  display: none !important;
+}
+
+.gacha-prize-inline-tool {
+  margin-left: 4px !important;
+  padding: 5px !important;
+  vertical-align: middle;
+}
+
+.gacha-prize-upload-field .button {
+  width: 100%;
+}
+
+.gacha-role-config-entry-list {
+  display: grid;
+  gap: 12px;
+}
+
+.shop-item-group-entry-list {
+  display: grid;
+  gap: 12px;
+}
+
+.shop-item-group-preview-more {
+  padding-left: 64px;
+  color: var(--orbit-muted);
+  font-size: 12px;
+}
+
+.shop-item-group-entry [data-shop-item-entry-preview][hidden],
+.shop-item-group-entry [data-shop-item-entry-body][hidden] {
+  display: none !important;
+}
+
+.shop-item-group-entry .gacha-prize-fieldset {
+  background: color-mix(in srgb, var(--orbit-panel) 88%, transparent);
+}
+
+.shop-item-group-entry .orbit-inline-summary-item {
+  min-height: 38px;
+}
+
+.gacha-role-config-entry {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px dashed var(--orbit-line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--orbit-panel) 90%, transparent);
+  overflow: visible;
+}
+
+.gacha-role-config-entry[draggable="true"] {
+  cursor: grab;
+}
+
+.gacha-role-config-entry-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.gacha-role-config-entry-toggle {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 20px 64px 16px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.gacha-role-config-entry-thumb {
+  width: 64px;
+  height: 64px;
+}
+
+.gacha-role-config-entry-caret {
+  color: var(--gacha-tier-accent, var(--orbit-muted));
+  display: grid;
+  place-items: center;
+}
+
+.gacha-role-config-entry.is-open .gacha-role-config-entry-caret {
+  transform: none;
+}
+
+.gacha-role-config-entry-copy {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.gacha-role-config-entry-copy strong {
+  display: block;
+  font-size: 14px;
+}
+
+.gacha-role-config-entry-copy span {
+  display: block;
+  color: var(--orbit-muted);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.gacha-role-config-entry.is-open [data-role-entry-preview-summary] {
+  display: none;
+}
+
+.gacha-role-config-entry-preview {
+  display: grid;
+  gap: 8px;
+  padding-left: 94px;
+}
+
+.gacha-role-config-entry-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.gacha-role-config-entry-preview-item {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.gacha-role-config-entry-preview-item strong {
+  font-size: 11px;
+  color: var(--orbit-muted);
+  text-transform: uppercase;
+}
+
+.gacha-role-config-entry-preview-item span {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.gacha-role-config-entry-preview-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.gacha-role-config-entry-body {
+  display: grid;
+  gap: 12px;
+}
+
+.gacha-role-config-entry-section {
+  display: grid;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--orbit-line);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--orbit-panel) 86%, transparent);
+}
+
+.gacha-role-child-panel {
+  display: grid;
+  gap: 10px;
+}
+
+.gacha-role-child-status-grid {
+  margin: 0 !important;
+}
+
+.gacha-role-child-status-field {
+  display: grid;
+  gap: 8px;
+}
+
+.gacha-role-child-hint {
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.gacha-role-child-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.gacha-role-child-row {
+  display: grid;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--orbit-line);
+}
+
+.gacha-role-child-row:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.gacha-asset-dropdown,
+.gacha-asset-dropdown .menu {
+  z-index: 60 !important;
+}
+
+.gacha-asset-option {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+}
+
+.gacha-asset-option-thumb {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid var(--orbit-line);
+  background: var(--orbit-panel);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.gacha-asset-option-thumb img,
+.gacha-asset-option-thumb video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.gacha-asset-option-thumb.is-empty {
+  color: var(--orbit-muted);
+}
+
+.gacha-asset-option-copy {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.gacha-asset-option-copy strong {
+  display: block;
+  font-size: 12px;
+}
+
+.gacha-asset-option-copy span {
+  display: block;
+  color: var(--orbit-muted);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.gacha-asset-preview-popup {
+  position: absolute;
+  z-index: 4000;
+  width: 192px;
+  padding: 10px;
+  border-radius: 14px;
+  border: 1px solid var(--orbit-line);
+  background: color-mix(in srgb, var(--orbit-panel) 94%, white 6%);
+  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.18);
+  pointer-events: none;
+  display: grid;
+  gap: 8px;
+}
+
+.gacha-asset-preview-popup img,
+.gacha-asset-preview-popup video {
+  width: 100%;
+  height: 172px;
+  object-fit: contain;
+  display: block;
+}
+
+.gacha-asset-preview-popup span {
+  color: var(--orbit-muted);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.orbit-drag-handle {
+  color: var(--orbit-muted);
+  cursor: grab;
+  margin-right: 4px;
+}
+
+#gachaSettingsForm .inline.fields,
+.gacha-prize-editor-actions {
+  gap: 14px;
+}
+
+.ui.checkbox:not(.toggle),
+.orbit-native-checkbox {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-height: 24px;
+  padding-left: 0 !important;
+  margin: 0;
+  flex-wrap: nowrap;
+}
+
+.ui.checkbox:not(.toggle)::before,
+.ui.checkbox:not(.toggle)::after,
+.ui.checkbox:not(.toggle) > span::before,
+.ui.checkbox:not(.toggle) > span::after,
+.ui.checkbox:not(.toggle) > label::before,
+.ui.checkbox:not(.toggle) > label::after,
+.orbit-native-checkbox::before,
+.orbit-native-checkbox::after,
+.orbit-native-checkbox > span::before,
+.orbit-native-checkbox > span::after,
+.orbit-native-checkbox > label::before,
+.orbit-native-checkbox > label::after {
+  display: none !important;
+  content: none !important;
+}
+
+.ui.checkbox:not(.toggle) input[type="checkbox"],
+.orbit-native-checkbox input[type="checkbox"] {
+  position: static;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  clip: auto !important;
+  clip-path: none !important;
+  overflow: visible !important;
+  appearance: auto !important;
+  -webkit-appearance: checkbox !important;
+  accent-color: var(--orbit-primary);
+  background: #fff;
+  border: 1px solid var(--orbit-line);
+  border-radius: 4px;
+  width: 17px;
+  height: 17px;
+  margin: 2px 0 0 0;
+  flex: 0 0 17px;
+}
+
+.ui.checkbox:not(.toggle) input.hidden[type="checkbox"],
+.orbit-native-checkbox input.hidden[type="checkbox"] {
+  position: static !important;
+  left: auto !important;
+  top: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  z-index: auto !important;
+  width: 17px !important;
+  height: 17px !important;
+}
+
+.ui.checkbox:not(.toggle) > span,
+.ui.checkbox:not(.toggle) > label,
+.orbit-native-checkbox > span,
+.orbit-native-checkbox > label {
+  padding-left: 0;
+  margin: 0 !important;
+  line-height: 1.4;
+  color: var(--orbit-text) !important;
+}
+
+.orbit-help-table td:first-child {
+  font-weight: 700;
+  color: var(--orbit-text);
+  white-space: nowrap;
+}
+
+.gacha-prize-empty {
+  border: 1px dashed var(--orbit-line);
+  border-radius: 14px;
+  padding: 18px;
+  text-align: center;
+  color: var(--orbit-muted);
+}
+
+.gacha-timeline {
+  display: grid;
+  gap: 8px;
+}
+
+.gacha-timeline-row {
+  display: grid;
+  grid-template-columns: 16px minmax(120px, 180px) minmax(80px, 120px) minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+}
+
+.gacha-timeline-row small {
+  color: var(--orbit-muted);
+}
+
+.gacha-timeline-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--orbit-muted);
+}
+
+.gacha-timeline-dot.active {
+  background: var(--orbit-success);
+}
+
+.gacha-timeline-dot.paused {
+  background: var(--orbit-warning);
+}
+
+.gacha-timeline-dot.condition {
+  background: var(--orbit-primary);
+}
+
+[data-theme="dark"] .ui.table,
+[data-theme="dark"] .ui.segment,
+[data-theme="dark"] .ui.menu,
+[data-theme="dark"] .ui.input > input,
+[data-theme="dark"] .ui.dropdown,
+[data-theme="dark"] .ui.modal,
+[data-theme="dark"] .ui.form input,
+[data-theme="dark"] .ui.form textarea,
+[data-theme="dark"] .ui.selection.dropdown {
+  background: var(--orbit-panel) !important;
+  color: var(--orbit-text) !important;
+  border-color: var(--orbit-line) !important;
+}
+
+[data-theme="dark"] .ui.table thead th,
+[data-theme="dark"] .ui.table tbody tr {
+  background: var(--orbit-panel) !important;
+  color: var(--orbit-text) !important;
+}
+
+@media (max-width: 960px) {
+  :root {
+    --orbit-drawer-width: 100vw;
+  }
+
+  .orbit-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .orbit-sidebar {
+    display: none;
+  }
+
+  .orbit-topbar {
+    flex-wrap: wrap;
+    height: auto;
+    padding: 12px;
+  }
+
+  .orbit-content {
+    padding: 12px;
+  }
+
+  body.drawer-open.drawer-mode-side .orbit-main {
+    margin-right: 0;
+  }
+
+  .orbit-metric-strip,
+  .orbit-compact-grid,
+  .gacha-tier-grid,
+  .orbit-bag-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .gacha-prize-summary {
+    grid-template-columns: 20px 64px 16px minmax(0, 1fr);
+  }
+
+  .gacha-rate-tier-head,
+  .gacha-rate-prize-row {
+    grid-template-columns: 1fr;
+  }
+
+  .gacha-rate-tier-control-grid,
+  .gacha-rate-prize-control-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .gacha-rate-tier-input,
+  .gacha-rate-prize-output {
+    text-align: left;
+  }
+
+  .gacha-rate-prize-flags {
+    justify-content: flex-start;
+  }
+
+  .gacha-role-config-row .gacha-prize-summary {
+    grid-template-columns: 20px 64px 16px minmax(0, 1fr);
+  }
+
+  .gacha-prize-thumb {
+    width: 64px;
+    height: 64px;
+  }
+
+  .gacha-prize-chip-row,
+  .gacha-prize-summary-caret {
+    grid-column: 2 / -1;
+  }
+
+  .gacha-prize-editor {
+    padding-left: 14px;
+  }
+
+  .gacha-role-config-preview-list {
+    padding-left: 14px;
+  }
+
+  .gacha-rate-overview-note {
+    display: grid;
+  }
+
+  .gacha-rate-overview-totals {
+    justify-content: flex-start;
+  }
+
+  .gacha-role-config-preview-row {
+    grid-template-columns: 48px minmax(0, 1fr);
+  }
+
+  .shop-item-group-preview-more {
+    padding-left: 0;
+  }
+
+  .gacha-role-config-preview-meta {
+    grid-column: 2;
+    justify-content: flex-start;
+  }
+
+  .gacha-prize-editor-art {
+    grid-template-columns: 1fr;
+  }
+
+  .gacha-prize-editor-artbox {
+    justify-items: start;
+  }
+
+  .gacha-role-config-entry-head {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .gacha-role-config-entry-toggle {
+    grid-template-columns: 20px 52px 16px minmax(0, 1fr);
+  }
+
+  .gacha-role-config-entry-preview {
+    padding-left: 0;
+  }
+
+  .gacha-role-config-entry-preview-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .gacha-timeline-row {
+    grid-template-columns: 16px minmax(0, 1fr);
+  }
+
+  .gacha-timeline-row span,
+  .gacha-timeline-row small {
+    grid-column: 2;
+  }
+
+  .orbit-channel-row {
+    grid-template-columns: 32px minmax(0, 1fr);
+  }
+
+  .orbit-channel-sidecar {
+    grid-column: 2;
+    justify-self: start;
+    min-width: 0;
+  }
+
+  .orbit-bag-summary-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,27 @@
+<?php
+
+return [
+    'database' => [
+        'host' => '127.0.0.1',
+        'port' => 3306,
+        'database' => 'workspace',
+        'username' => 'root',
+        'password' => '',
+    ],
+    'discord' => [
+        'clientId' => 'APPLICATION_ID',
+        'clientSecret' => 'OAUTH2_CLIENT_SECRET',
+        'redirectUri' => 'http://localhost/workspace/api/auth/callback.php',
+        'botToken' => 'BOT_TOKEN',
+        'botUserId' => 'BOT_USER_ID',
+        'guildId' => 'SERVER_ID',
+        'gatewayIntents' => 3243775,
+    ],
+    'auth' => [
+        'sessionName' => 'dekpoke_workspace_session',
+        'ownerDiscordUserIds' => [
+            'YOUR_DISCORD_USER_ID',
+        ],
+        'playerTokenSecret' => 'change-me-workspace-player-token',
+    ],
+];

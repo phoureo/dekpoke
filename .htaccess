@@ -1,0 +1,10 @@
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteRule ^(config|core|services|sql|storage|workers|pages)(/|$) - [F,L]
+</IfModule>
+
+<FilesMatch "(config\.local\.php|\.env|composer\.(json|lock)|package(-lock)?\.json)$">
+  Require all denied
+</FilesMatch>

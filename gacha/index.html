@@ -1841,6 +1841,57 @@
       text-shadow: 0 0 14px rgba(255, 255, 255, 0.12);
     }
 
+    .preloader-progress {
+      position: absolute;
+      left: 50%;
+      bottom: calc(env(safe-area-inset-bottom, 0px) + 54px);
+      width: min(320px, calc(100vw - 72px));
+      transform: translateX(-50%);
+      display: grid;
+      gap: 8px;
+      justify-items: stretch;
+    }
+
+    .preloader-progress-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: rgba(242, 246, 255, 0.82);
+      text-shadow: 0 0 14px rgba(255, 255, 255, 0.14);
+    }
+
+    .preloader-percent {
+      min-width: 4.6em;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      color: rgba(255, 245, 194, 0.98);
+    }
+
+    .preloader-progress-track {
+      height: 7px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.12);
+      box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, 0.12),
+        0 0 18px rgba(118, 242, 255, 0.12);
+    }
+
+    .preloader-progress-bar {
+      width: calc(var(--preloader-progress, 0) * 1%);
+      height: 100%;
+      border-radius: inherit;
+      background:
+        linear-gradient(90deg, rgba(124, 232, 255, 0.92), rgba(255, 245, 176, 0.96), rgba(255, 126, 222, 0.92));
+      box-shadow: 0 0 18px rgba(140, 238, 255, 0.34);
+      transition: width 0.16s ease;
+    }
+
     .mini-gacha-loader {
       position: absolute;
       --stage-unit: var(--stage-unit-px, calc(100cqi / 900));
@@ -4154,6 +4205,15 @@
   <body>
   <div id="preloader" class="preloader">
     <img class="preloader-brand" src="images/logo_intro.png" alt="Dekpoke intro logo" />
+    <div class="preloader-progress" aria-hidden="true">
+      <div class="preloader-progress-row">
+        <span id="preloaderProgressLabel">Loading assets</span>
+        <span id="preloaderPercent" class="preloader-percent">0%</span>
+      </div>
+      <div class="preloader-progress-track">
+        <div id="preloaderProgressBar" class="preloader-progress-bar"></div>
+      </div>
+    </div>
     <div id="preloaderText" class="preloader-text">Loading...</div>
   </div>
 
@@ -4339,6 +4399,9 @@
     const stage = document.querySelector(".stage");
     const preloader = document.getElementById("preloader");
     const preloaderText = document.getElementById("preloaderText");
+    const preloaderProgressLabel = document.getElementById("preloaderProgressLabel");
+    const preloaderPercent = document.getElementById("preloaderPercent");
+    const preloaderProgressBar = document.getElementById("preloaderProgressBar");
     const profileChip = document.getElementById("profileChip");
     const profileAvatar = document.getElementById("profileAvatar");
     const profileAvatarFallback = document.getElementById("profileAvatarFallback");
@@ -6098,9 +6161,51 @@
       }
     }
 
+    function setPreloaderProgress(percent = 0, label = "") {
+      const safePercent = Math.max(0, Math.min(100, Math.round(Number(percent) || 0)));
+      if (preloader) {
+        preloader.style.setProperty("--preloader-progress", String(safePercent));
+      }
+      if (preloaderProgressBar) {
+        preloaderProgressBar.style.width = `${safePercent}%`;
+      }
+      if (preloaderPercent) {
+        preloaderPercent.textContent = `${safePercent}%`;
+      }
+      if (label && preloaderProgressLabel) {
+        preloaderProgressLabel.textContent = label;
+      }
+    }
+
+    function createPreloaderProgressTracker({ start = 0, end = 100, total = 1, label = "Loading assets" } = {}) {
+      const safeStart = Math.max(0, Math.min(100, Number(start) || 0));
+      const safeEnd = Math.max(safeStart, Math.min(100, Number(end) || 100));
+      const safeTotal = Math.max(1, Number(total) || 1);
+      let completed = 0;
+      setPreloaderProgress(safeStart, label);
+      return {
+        step(stepLabel = label) {
+          completed = Math.min(safeTotal, completed + 1);
+          const ratio = completed / safeTotal;
+          setPreloaderProgress(safeStart + (safeEnd - safeStart) * ratio, stepLabel);
+        },
+        finish(stepLabel = label) {
+          completed = safeTotal;
+          setPreloaderProgress(safeEnd, stepLabel);
+        }
+      };
+    }
+
+    function trackAssetLoad(promise, tracker, label) {
+      return Promise.resolve(promise).finally(() => {
+        tracker?.step(label);
+      });
+    }
+
     function showPreloader(text = "Loading...", options = {}) {
-      const { instant = false } = options;
+      const { instant = false, progress = 0, progressLabel = "Loading assets" } = options;
       setPreloaderText(text);
+      setPreloaderProgress(progress, progressLabel);
       if (preloader) {
         preloader.classList.toggle("is-login-redirect", instant);
         preloader.classList.remove("is-hidden");
@@ -18729,13 +18834,23 @@
       spriteAsset20.frameHeight = Math.floor(spriteAsset20Image.height / spriteAsset20.rows);
     }
 
-    function loadShellAssets() {
-      if (shellAssetsLoaded) return Promise.resolve();
+    function loadShellAssets(options = {}) {
+      if (shellAssetsLoaded) {
+        options.tracker?.finish(options.label || "Shell ready");
+        return Promise.resolve();
+      }
       if (shellAssetsPromise) return shellAssetsPromise;
 
+      const tracker = options.tracker || createPreloaderProgressTracker({
+        start: options.start ?? 0,
+        end: options.end ?? 24,
+        total: 2,
+        label: options.label || "Loading shell"
+      });
+
       shellAssetsPromise = Promise.all([
-        fontsReady,
-        loadImage("images/source_background_2.jpg", { mimeType: "auto" })
+        trackAssetLoad(fontsReady, tracker, "Loading fonts"),
+        trackAssetLoad(loadImage("images/source_background_2.jpg", { mimeType: "auto" }), tracker, "Loading background")
       ])
         .then(([
           _fontsReady,
@@ -18743,6 +18858,7 @@
         ]) => {
           assignShellAssets(background);
           shellAssetsLoaded = true;
+          tracker.finish("Shell ready");
         });
 
       return shellAssetsPromise;
@@ -18852,45 +18968,64 @@
         rewardItemImageCache.set("images/item-1.png", rewardItem1Image);
     }
 
-    function loadGachaGameAssets() {
-      if (gachaGameAssetsLoaded) return Promise.resolve();
+    function loadGachaGameAssets(options = {}) {
+      if (gachaGameAssetsLoaded) {
+        setPreloaderProgress(options.end ?? 100, "Assets ready");
+        return Promise.resolve();
+      }
       if (gachaGameAssetsPromise) return gachaGameAssetsPromise;
 
-      gachaGameAssetsPromise = loadShellAssets()
-        .then(() => Promise.all([
-          loadImage("images/img_Asset 8.png"),
-          loadImage("images/img_Asset 8-1.png"),
-          loadImage("images/img_Asset 10.png"),
-          loadImage("images/img_Asset 19.png"),
-          loadImage("images/img_Asset 20.png"),
-          loadImage("images/ball_1.png", { noStore: true }),
-          loadImage("images/ball_2.png", { noStore: true }),
-          loadImage("images/ball_3.png", { noStore: true }),
-          loadImage("images/ball_4.png", { noStore: true }),
-          loadImage("images/ball_5.png", { noStore: true }),
-          loadImage("images/img_Asset 4.png"),
-          loadImage("images/img_Asset 7.png"),
-          loadImage("images/img_Asset 13.png"),
-          loadImage("images/img_Asset 14.png"),
-          loadImage("images/ui_2.png"),
-          loadImage("images/icon_1.png"),
-          loadImage("images/icon_2.png"),
-          loadImage("images/icon_3.png"),
-          loadImage("images/icon_4.png"),
-          loadImage("images/icon_5.png"),
-          loadImage("images/ball_1-1.png", { noStore: true }),
-          loadImage("images/ball_1-2.png", { noStore: true }),
-          loadImage("images/ball_1-3.png", { noStore: true }),
-          loadImage("images/ball_1-4.png", { noStore: true }),
-          loadImage("images/item-1.png"),
-          loadImage("images/ui_5.png"),
-          loadImage("images/btn_3.png"),
-          loadImage("images/btn_4.png"),
-          loadImage("images/btn_4-1.png"),
-          loadImage("images/btn_5.png"),
-          loadImage("images/btn_5-1.png"),
-          loadImage("images/pic_numberic.png")
-        ]))
+      const shellTracker = createPreloaderProgressTracker({
+        start: options.start ?? 0,
+        end: options.shellEnd ?? 18,
+        total: 2,
+        label: "Loading shell"
+      });
+      const gameAssetEntries = [
+        ["images/img_Asset 8.png", undefined, "Loading machine"],
+        ["images/img_Asset 8-1.png", undefined, "Loading machine"],
+        ["images/img_Asset 10.png", undefined, "Loading machine"],
+        ["images/img_Asset 19.png", undefined, "Loading room"],
+        ["images/img_Asset 20.png", undefined, "Loading room"],
+        ["images/ball_1.png", { noStore: true }, "Loading balls"],
+        ["images/ball_2.png", { noStore: true }, "Loading balls"],
+        ["images/ball_3.png", { noStore: true }, "Loading balls"],
+        ["images/ball_4.png", { noStore: true }, "Loading balls"],
+        ["images/ball_5.png", { noStore: true }, "Loading balls"],
+        ["images/img_Asset 4.png", undefined, "Loading effects"],
+        ["images/img_Asset 7.png", undefined, "Loading effects"],
+        ["images/img_Asset 13.png", undefined, "Loading effects"],
+        ["images/img_Asset 14.png", undefined, "Loading effects"],
+        ["images/ui_2.png", undefined, "Loading UI"],
+        ["images/icon_1.png", undefined, "Loading UI"],
+        ["images/icon_2.png", undefined, "Loading UI"],
+        ["images/icon_3.png", undefined, "Loading UI"],
+        ["images/icon_4.png", undefined, "Loading UI"],
+        ["images/icon_5.png", undefined, "Loading UI"],
+        ["images/ball_1-1.png", { noStore: true }, "Loading reward ball"],
+        ["images/ball_1-2.png", { noStore: true }, "Loading reward ball"],
+        ["images/ball_1-3.png", { noStore: true }, "Loading reward ball"],
+        ["images/ball_1-4.png", { noStore: true }, "Loading reward ball"],
+        ["images/item-1.png", undefined, "Loading rewards"],
+        ["images/ui_5.png", undefined, "Loading buttons"],
+        ["images/btn_3.png", undefined, "Loading buttons"],
+        ["images/btn_4.png", undefined, "Loading buttons"],
+        ["images/btn_4-1.png", undefined, "Loading buttons"],
+        ["images/btn_5.png", undefined, "Loading buttons"],
+        ["images/btn_5-1.png", undefined, "Loading buttons"],
+        ["images/pic_numberic.png", undefined, "Loading counter"]
+      ];
+      const gameTracker = createPreloaderProgressTracker({
+        start: options.shellEnd ?? 18,
+        end: options.end ?? 96,
+        total: gameAssetEntries.length,
+        label: "Loading gacha assets"
+      });
+
+      gachaGameAssetsPromise = loadShellAssets({ tracker: shellTracker })
+        .then(() => Promise.all(gameAssetEntries.map(([src, imageOptions, label]) => (
+          trackAssetLoad(loadImage(src, imageOptions || {}), gameTracker, label)
+        ))))
         .then(([
           machineAsset8,
           machineAsset8Active,
@@ -18960,6 +19095,7 @@
 	          });
 	          gachaGameAssetsLoaded = true;
 	          updateCampaignCounterVisibility();
+          setPreloaderProgress(options.end ?? 100, "Assets ready");
 	        })
         .catch((error) => {
           gachaGameAssetsPromise = null;
@@ -18984,7 +19120,7 @@
         showMiniGachaLoader("กำลังโหลดกาชา");
         await waitForPaintFrames(2);
       } else {
-        showPreloader("กำลังโหลดกาชาปอง...");
+        showPreloader("กำลังโหลดกาชาปอง...", { progress: 0, progressLabel: "Loading gacha assets" });
       }
 
       try {
@@ -19061,7 +19197,7 @@
     async function bootGachaPage() {
       if (isGachaMenuId(initialRouteMenuId)) {
         shortcutShellModeActive = false;
-        showPreloader("กำลังโหลดกาชาปอง...");
+        showPreloader("กำลังโหลดกาชาปอง...", { progress: 0, progressLabel: "Loading gacha assets" });
         try {
           void loadProfileSession();
           await ensureGachaGameLoadedAndOpen(performance.now(), { replaceRoute: true });
@@ -19073,10 +19209,10 @@
       }
 
       shortcutShellModeActive = true;
-      showPreloader(getShortcutShellPreloaderText(initialRouteMenuId));
+      showPreloader(getShortcutShellPreloaderText(initialRouteMenuId), { progress: 0, progressLabel: "Loading shell" });
       try {
         const profileSessionPromise = loadProfileSession();
-        await loadShellAssets();
+        await loadShellAssets({ start: 0, end: 92, label: "Loading shell" });
         if (initialRouteMenuId === "play" || initialRouteMenuId === "slot5" || initialRouteMenuId === "mileage") {
           await profileSessionPromise;
         }

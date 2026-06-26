@@ -17,6 +17,7 @@ final class DashboardPermissionService
             'earn_settings' => ['rewards.earn_settings', 'rewards.manage'],
             'earn_manual' => ['rewards.earn_manual', 'rewards.manage'],
             'reward_report' => ['rewards.reward_report', 'rewards.manage'],
+            'mileage_report' => ['rewards.mileage_report', 'rewards.manage'],
             'shop_report' => ['rewards.shop_report', 'rewards.manage'],
             'shop_member_bags' => ['rewards.shop_member_bags', 'rewards.manage'],
             'bag_transaction_report' => ['rewards.bag_transaction_report', 'rewards.manage'],
@@ -110,8 +111,8 @@ final class DashboardPermissionService
 
         return [
             ['id' => 'owner', 'name' => 'Owner', 'permissions' => ['*'], 'userIds' => $ownerIds],
-            ['id' => 'admin', 'name' => 'Admin', 'permissions' => ['admin.view', 'rewards.manage', 'rewards.earn_settings', 'rewards.earn_manual', 'rewards.reward_report', 'rewards.shop_report', 'rewards.shop_member_bags', 'rewards.bag_transaction_report', 'rewards.shop_setting', 'gacha.manage', 'ops.admin', 'ops.backfill', 'logs.view'], 'userIds' => []],
-            ['id' => 'reward', 'name' => 'Rewards', 'permissions' => ['admin.view', 'rewards.earn_settings', 'rewards.earn_manual', 'rewards.reward_report', 'rewards.shop_report', 'rewards.shop_member_bags', 'rewards.bag_transaction_report', 'rewards.shop_setting', 'gacha.manage'], 'userIds' => []],
+            ['id' => 'admin', 'name' => 'Admin', 'permissions' => ['admin.view', 'rewards.manage', 'rewards.earn_settings', 'rewards.earn_manual', 'rewards.reward_report', 'rewards.mileage_report', 'rewards.shop_report', 'rewards.shop_member_bags', 'rewards.bag_transaction_report', 'rewards.shop_setting', 'gacha.manage', 'ops.admin', 'ops.backfill', 'logs.view'], 'userIds' => []],
+            ['id' => 'reward', 'name' => 'Rewards', 'permissions' => ['admin.view', 'rewards.earn_settings', 'rewards.earn_manual', 'rewards.reward_report', 'rewards.mileage_report', 'rewards.shop_report', 'rewards.shop_member_bags', 'rewards.bag_transaction_report', 'rewards.shop_setting', 'gacha.manage'], 'userIds' => []],
             ['id' => 'viewer', 'name' => 'Viewer', 'permissions' => ['admin.view'], 'userIds' => []],
             ['id' => 'permission_admin', 'name' => 'Permission Admin', 'permissions' => ['admin.view', 'ops.admin', 'permission.manage', 'logs.view'], 'userIds' => []],
         ];
@@ -126,6 +127,7 @@ final class DashboardPermissionService
             ['code' => 'rewards.earn_settings', 'label' => 'Rewards: Earn Settings'],
             ['code' => 'rewards.earn_manual', 'label' => 'Rewards: Manual Earn'],
             ['code' => 'rewards.reward_report', 'label' => 'Rewards: Reward Report'],
+            ['code' => 'rewards.mileage_report', 'label' => 'Rewards: Mileage Report'],
             ['code' => 'rewards.shop_report', 'label' => 'Rewards: Shop Report'],
             ['code' => 'rewards.shop_member_bags', 'label' => 'Rewards: Member Bags'],
             ['code' => 'rewards.bag_transaction_report', 'label' => 'Rewards: Bag Transaction Report'],

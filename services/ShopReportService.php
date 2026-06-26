@@ -17,16 +17,21 @@ final class ShopReportService
 
         $q = trim((string) ($filters['q'] ?? ''));
         if ($q !== '') {
-            $params['q'] = '%' . $q . '%';
-            $where[] = '(
-                sw.userId LIKE :q
-                OR COALESCE(u.userName, "") LIKE :q
-                OR COALESCE(u.globalName, "") LIKE :q
-                OR COALESCE(m.nickName, "") LIKE :q
-                OR COALESCE(wl.sourceType, "") LIKE :q
-                OR COALESCE(wl.sourceId, "") LIKE :q
-                OR COALESCE(wl.metadataJson, "") LIKE :q
-            )';
+            self::appendLikeGroup(
+                $where,
+                $params,
+                [
+                    'sw.userId',
+                    'COALESCE(u.userName, "")',
+                    'COALESCE(u.globalName, "")',
+                    'COALESCE(m.nickName, "")',
+                    'COALESCE(wl.sourceType, "")',
+                    'COALESCE(wl.sourceId, "")',
+                    'COALESCE(wl.metadataJson, "")',
+                ],
+                '%' . $q . '%',
+                'purchaseQ'
+            );
         }
 
         foreach (['unitCode' => 'wl.unitCode', 'sourceType' => 'wl.sourceType'] as $filterKey => $column) {
@@ -165,14 +170,19 @@ final class ShopReportService
 
         $q = trim((string) ($filters['q'] ?? ''));
         if ($q !== '') {
-            $params['q'] = '%' . $q . '%';
-            $where[] = '(
-                m.userId LIKE :q
-                OR COALESCE(u.userName, "") LIKE :q
-                OR COALESCE(u.globalName, "") LIKE :q
-                OR COALESCE(m.nickName, "") LIKE :q
-                OR COALESCE(inv.itemSummary, "") LIKE :q
-            )';
+            self::appendLikeGroup(
+                $where,
+                $params,
+                [
+                    'm.userId',
+                    'COALESCE(u.userName, "")',
+                    'COALESCE(u.globalName, "")',
+                    'COALESCE(m.nickName, "")',
+                    'COALESCE(inv.itemSummary, "")',
+                ],
+                '%' . $q . '%',
+                'memberBagQ'
+            );
         }
 
         if (!empty($filters['hideInactive'])) {
@@ -200,12 +210,18 @@ final class ShopReportService
 
         $itemCode = trim((string) ($filters['itemCode'] ?? ''));
         if ($itemCode !== '') {
-            $params['itemCode'] = '%' . $itemCode . '%';
+            $itemCodeValue = '%' . $itemCode . '%';
+            $itemCodeConditions = [];
+            foreach (['fcitem.itemCode', 'fcitem.itemName'] as $index => $column) {
+                $placeholder = 'itemCodeLike' . $index;
+                $params[$placeholder] = $itemCodeValue;
+                $itemCodeConditions[] = $column . ' LIKE :' . $placeholder;
+            }
             $where[] = 'EXISTS (
                 SELECT 1 FROM tbl_shop_inventory fci
                 INNER JOIN tbl_shop_item fcitem ON fcitem.shopItemId = fci.shopItemId
                  WHERE fci.guildId = m.guildId AND fci.userId = m.userId AND fci.quantity > 0
-                   AND (fcitem.itemCode LIKE :itemCode OR fcitem.itemName LIKE :itemCode)
+                   AND (' . implode(' OR ', $itemCodeConditions) . ')
             )';
         }
 
@@ -250,7 +266,7 @@ final class ShopReportService
         $total = Database::fetch(
             'SELECT COUNT(*) AS total
                FROM tbl_member m
-         INNER JOIN tbl_user u ON u.userId = m.userId
+          LEFT JOIN tbl_user u ON u.userId = m.userId
           LEFT JOIN ' . $walletSql . ' wallet ON wallet.guildId = m.guildId AND wallet.userId = m.userId
           LEFT JOIN ' . $inventorySql . ' inv ON inv.guildId = m.guildId AND inv.userId = m.userId
               WHERE ' . $whereSql,
@@ -263,7 +279,7 @@ final class ShopReportService
                     SUM(CASE WHEN COALESCE(inv.itemQuantity, 0) > 0 THEN 1 ELSE 0 END) AS membersWithItems,
                     SUM(COALESCE(inv.itemQuantity, 0)) AS totalItemQuantity
                FROM tbl_member m
-         INNER JOIN tbl_user u ON u.userId = m.userId
+          LEFT JOIN tbl_user u ON u.userId = m.userId
           LEFT JOIN ' . $walletSql . ' wallet ON wallet.guildId = m.guildId AND wallet.userId = m.userId
           LEFT JOIN ' . $inventorySql . ' inv ON inv.guildId = m.guildId AND inv.userId = m.userId
               WHERE ' . $whereSql,
@@ -284,7 +300,7 @@ final class ShopReportService
                     GREATEST(COALESCE(wallet.walletUpdateDate, "1970-01-01 00:00:00"), COALESCE(inv.inventoryUpdateDate, "1970-01-01 00:00:00")) AS lastActivityDate
                     ' . ($walletColumnSelects ? ', ' . implode(', ', $walletColumnSelects) : '') . '
                FROM tbl_member m
-         INNER JOIN tbl_user u ON u.userId = m.userId
+          LEFT JOIN tbl_user u ON u.userId = m.userId
           LEFT JOIN ' . $walletSql . ' wallet ON wallet.guildId = m.guildId AND wallet.userId = m.userId
           LEFT JOIN ' . $inventorySql . ' inv ON inv.guildId = m.guildId AND inv.userId = m.userId
           ' . implode("\n          ", $walletColumnJoins) . '
@@ -564,7 +580,7 @@ final class ShopReportService
                     COALESCE(inv.itemSummary, "") AS itemSummary,
                     GREATEST(COALESCE(wallet.walletUpdateDate, "1970-01-01 00:00:00"), COALESCE(inv.inventoryUpdateDate, "1970-01-01 00:00:00")) AS lastActivityDate
                FROM tbl_member m
-         INNER JOIN tbl_user u ON u.userId = m.userId
+          LEFT JOIN tbl_user u ON u.userId = m.userId
           LEFT JOIN ' . $walletSql . ' wallet ON wallet.guildId = m.guildId AND wallet.userId = m.userId
           LEFT JOIN ' . $inventorySql . ' inv ON inv.guildId = m.guildId AND inv.userId = m.userId
               WHERE m.guildId = :guildId AND m.userId = :userId
@@ -1322,6 +1338,20 @@ final class ShopReportService
         if ($dateTo !== null) {
             $params['dateTo'] = $dateTo;
             $where[] = $column . ' <= :dateTo';
+        }
+    }
+
+    private static function appendLikeGroup(array &$where, array &$params, array $columns, string $value, string $paramPrefix): void
+    {
+        $clauses = [];
+        foreach (array_values($columns) as $index => $column) {
+            $placeholder = $paramPrefix . $index;
+            $params[$placeholder] = $value;
+            $clauses[] = $column . ' LIKE :' . $placeholder;
+        }
+
+        if ($clauses !== []) {
+            $where[] = '(' . implode(' OR ', $clauses) . ')';
         }
     }
 

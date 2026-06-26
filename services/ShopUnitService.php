@@ -467,9 +467,14 @@ final class ShopUnitService
         $walletLedgerId = 0;
         $currentBalance = 0;
         $nextBalance = 0;
+        $allowNegative = !empty($context['allowNegative']);
+
+        $ownsTransaction = !$pdo->inTransaction();
 
         try {
-            $pdo->beginTransaction();
+            if ($ownsTransaction) {
+                $pdo->beginTransaction();
+            }
 
             $walletId = self::ensureWallet($guildId, $userId, $unitCode);
             if ($walletId <= 0) {
@@ -486,7 +491,7 @@ final class ShopUnitService
 
             $currentBalance = (int) ($row['balanceAmount'] ?? 0);
             $nextBalance = $currentBalance + $amountDelta;
-            if ($nextBalance < 0) {
+            if ($nextBalance < 0 && !$allowNegative) {
                 throw new RuntimeException('INSUFFICIENT_BALANCE');
             }
 
@@ -521,9 +526,11 @@ final class ShopUnitService
                 ]);
             }
 
-            $pdo->commit();
+            if ($ownsTransaction) {
+                $pdo->commit();
+            }
         } catch (Throwable $error) {
-            if ($pdo->inTransaction()) {
+            if ($ownsTransaction && $pdo->inTransaction()) {
                 $pdo->rollBack();
             }
             throw $error;

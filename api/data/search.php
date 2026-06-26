@@ -7,12 +7,13 @@ require __DIR__ . '/../init.php';
 Auth::requireUser();
 
 $q = Input::str('q');
-if (!$q || mb_strlen($q) < 2) {
-    Response::json(['ok' => true, 'items' => []]);
-}
-
 $type = trim((string) Input::str('type', ''));
 $type = in_array($type, ['member', 'message', 'role', 'channel'], true) ? $type : '';
+
+$minimumLength = $type === 'member' ? 1 : 2;
+if (!$q || mb_strlen($q) < $minimumLength) {
+    Response::json(['ok' => true, 'items' => []]);
+}
 
 AuditLogger::access('global_search', 'search', null, ['q' => $q, 'type' => $type], 'sensitive');
 $guildId = (string) Bootstrap::config('discord.guildId', '');

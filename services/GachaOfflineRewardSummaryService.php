@@ -47,8 +47,7 @@ final class GachaOfflineRewardSummaryService
         $entries = array_merge(
             $this->rewardEntriesSince($guildId, $userId, $state['reward']),
             $this->itemEntriesSince($guildId, $userId, $state['item']),
-            $this->roleEntriesSince($guildId, $userId, $state['role']),
-            $this->spinEntriesSince($guildId, $userId, $state['spin'])
+            $this->roleEntriesSince($guildId, $userId, $state['role'])
         );
 
         usort($entries, static function (array $left, array $right): int {
@@ -683,6 +682,7 @@ final class GachaOfflineRewardSummaryService
             'earn_daily_checkin' => 'เช็คอินประจำวัน',
             'earn_manual' => 'แอดมินเพิ่มให้',
             'earn_manual_grant' => 'แอดมินเพิ่มให้',
+            'earn_manual_revoke' => 'แอดมินดึงคืน',
             'earn_text_active_daily' => 'ข้อความ active รายวัน',
             'earn_voice_hourly' => 'สะสมชั่วโมงเสียง',
             'earn_voice_10min_free_spin' => 'เข้าห้องครบ 10 นาที',

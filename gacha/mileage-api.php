@@ -31,7 +31,24 @@ function mileage_input(): array
 function mileage_save_allowed(): bool
 {
     $ip = trim(Http::clientIp());
-    if ($ip === '127.0.0.1' || $ip === '::1' || $ip === '::ffff:127.0.0.1') {
+    if (
+        $ip === '127.0.0.1'
+        || $ip === '::1'
+        || $ip === '::ffff:127.0.0.1'
+        || str_starts_with($ip, '192.168.')
+        || str_starts_with($ip, '10.')
+    ) {
+        return true;
+    }
+
+    $host = strtolower(trim((string) ($_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? '')));
+    $host = trim($host, '[]');
+    $host = preg_replace('/:\d+$/', '', $host) ?: '';
+    if (
+        in_array($host, ['localhost', '127.0.0.1', '::1'], true)
+        || str_starts_with($host, '192.168.')
+        || str_starts_with($host, '10.')
+    ) {
         return true;
     }
 
@@ -188,6 +205,175 @@ function mileage_degraded_bootstrap(string $boardCode): array
     ];
 }
 
+function mileage_uploaded_image_meta(): array
+{
+    $file = $_FILES['image'] ?? null;
+    if (!is_array($file) || (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+        throw new RuntimeException('MILEAGE_UPLOAD_MISSING');
+    }
+
+    $tmp = (string) ($file['tmp_name'] ?? '');
+    if ($tmp === '' || !is_uploaded_file($tmp)) {
+        throw new RuntimeException('MILEAGE_UPLOAD_INVALID');
+    }
+
+    $size = @getimagesize($tmp);
+    if (!is_array($size)) {
+        throw new RuntimeException('MILEAGE_UPLOAD_NOT_IMAGE');
+    }
+
+    $mime = strtolower((string) ($size['mime'] ?? ''));
+    $extensions = [
+        'image/png' => 'png',
+        'image/jpeg' => 'jpg',
+        'image/webp' => 'webp',
+        'image/gif' => 'gif',
+    ];
+    if (!isset($extensions[$mime])) {
+        throw new RuntimeException('MILEAGE_UPLOAD_UNSUPPORTED_TYPE');
+    }
+
+    if ((int) ($file['size'] ?? 0) > 30 * 1024 * 1024) {
+        throw new RuntimeException('MILEAGE_UPLOAD_TOO_LARGE');
+    }
+
+    return [
+        'tmp' => $tmp,
+        'mime' => $mime,
+        'extension' => $extensions[$mime],
+        'width' => max(1, (int) ($size[0] ?? 1)),
+        'height' => max(1, (int) ($size[1] ?? 1)),
+        'originalName' => (string) ($file['name'] ?? 'image'),
+    ];
+}
+
+function mileage_upload_asset(array $input): array
+{
+    if (!mileage_save_allowed()) {
+        mileage_json([
+            'ok' => false,
+            'code' => 'FORBIDDEN',
+            'message' => 'asset upload is restricted',
+        ], 403);
+    }
+
+    $meta = mileage_uploaded_image_meta();
+    $assetType = strtolower(trim((string) ($input['assetType'] ?? 'sprite')));
+    $folders = [
+        'sprite' => 'sprites',
+        'segment' => 'mileage/segments',
+        'reward_icon' => 'mileage/icons',
+    ];
+    if (!isset($folders[$assetType])) {
+        throw new RuntimeException('MILEAGE_UPLOAD_BAD_ASSET_TYPE');
+    }
+
+    $uploadDir = Bootstrap::rootPath('gacha/images/uploads/' . $folders[$assetType]);
+    if (!is_dir($uploadDir) && !mkdir($uploadDir, 0777, true) && !is_dir($uploadDir)) {
+        throw new RuntimeException('MILEAGE_UPLOAD_DIR_CREATE_FAILED');
+    }
+    @chmod(dirname($uploadDir), 0777);
+    @chmod($uploadDir, 0777);
+    if (!is_writable($uploadDir)) {
+        throw new RuntimeException('MILEAGE_UPLOAD_DIR_NOT_WRITABLE');
+    }
+
+    $safeStem = preg_replace('/[^a-z0-9_-]+/i', '-', pathinfo($meta['originalName'], PATHINFO_FILENAME)) ?: $assetType;
+    $safeStem = strtolower(trim($safeStem, '-_')) ?: $assetType;
+    $name = sprintf(
+        '%s_%s_%s.%s',
+        $safeStem,
+        date('Ymd_His'),
+        bin2hex(random_bytes(4)),
+        $meta['extension']
+    );
+    $target = $uploadDir . DIRECTORY_SEPARATOR . $name;
+    if (!move_uploaded_file($meta['tmp'], $target)) {
+        throw new RuntimeException('MILEAGE_UPLOAD_SAVE_FAILED');
+    }
+    @chmod($target, 0666);
+
+    $publicPath = 'images/uploads/' . $folders[$assetType] . '/' . $name;
+    try {
+        AuditLogger::access('gacha_mileage_asset_upload', 'file', $publicPath);
+    } catch (Throwable) {
+    }
+
+    return [
+        'ok' => true,
+        'assetType' => $assetType,
+        'path' => $publicPath,
+        'url' => $publicPath,
+        'width' => $meta['width'],
+        'height' => $meta['height'],
+        'mime' => $meta['mime'],
+    ];
+}
+
+function mileage_list_assets(): array
+{
+    $roots = [
+        'images/uploads/sprites',
+        'images/uploads/mileage',
+        'images',
+    ];
+    $allowedExtensions = ['png', 'jpg', 'jpeg', 'webp', 'gif'];
+    $spriteManifestPath = Bootstrap::rootPath('gacha/images/uploads/sprites/manifest.json');
+    $spriteManifest = [];
+    if (is_file($spriteManifestPath)) {
+        $decoded = json_decode((string) file_get_contents($spriteManifestPath), true);
+        $spriteManifest = is_array($decoded['assets'] ?? null) ? $decoded['assets'] : [];
+    }
+    $assets = [];
+    $seenPaths = [];
+    foreach ($roots as $root) {
+        $absolute = Bootstrap::rootPath('gacha/' . $root);
+        if (!is_dir($absolute)) {
+            continue;
+        }
+        $iterator = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($absolute, FilesystemIterator::SKIP_DOTS),
+            RecursiveIteratorIterator::SELF_FIRST
+        );
+        foreach ($iterator as $fileInfo) {
+            if (!$fileInfo instanceof SplFileInfo || !$fileInfo->isFile()) {
+                continue;
+            }
+            $extension = strtolower($fileInfo->getExtension());
+            if (!in_array($extension, $allowedExtensions, true)) {
+                continue;
+            }
+            $relative = str_replace('\\', '/', substr($fileInfo->getPathname(), strlen(Bootstrap::rootPath('gacha')) + 1));
+            if (isset($seenPaths[$relative])) {
+                continue;
+            }
+            $seenPaths[$relative] = true;
+            $size = @getimagesize($fileInfo->getPathname()) ?: [0, 0, 'mime' => ''];
+            $assets[] = [
+                'path' => $relative,
+                'folder' => $root,
+                'name' => $fileInfo->getFilename(),
+                'width' => max(0, (int) ($size[0] ?? 0)),
+                'height' => max(0, (int) ($size[1] ?? 0)),
+                'mime' => (string) ($size['mime'] ?? ''),
+                'updatedAt' => date(DateTimeInterface::ATOM, $fileInfo->getMTime()),
+                'spriteMeta' => is_array($spriteManifest[$relative] ?? null) ? $spriteManifest[$relative] : null,
+            ];
+            if (count($assets) >= 500) {
+                break 2;
+            }
+        }
+    }
+
+    usort($assets, static fn (array $a, array $b): int => strcmp((string) ($b['updatedAt'] ?? ''), (string) ($a['updatedAt'] ?? '')));
+
+    return [
+        'ok' => true,
+        'roots' => $roots,
+        'assets' => $assets,
+    ];
+}
+
 $input = mileage_input();
 $action = strtolower(trim((string) ($input['action'] ?? 'summary')));
 $boardCode = trim((string) ($input['boardCode'] ?? GachaMileageService::DEFAULT_BOARD_CODE));
@@ -195,6 +381,122 @@ $guildId = (string) Bootstrap::config('discord.guildId', '');
 
 try {
     $userId = '';
+
+    if ($action === 'editor_bootstrap') {
+        mileage_json([
+            'ok' => true,
+            'saveAllowed' => mileage_save_allowed(),
+        ] + GachaMileageService::editorBootstrap($boardCode));
+    }
+
+    if ($action === 'preview_bootstrap') {
+        $payload = is_array($input['board'] ?? null) ? $input['board'] : null;
+        $board = GachaMileageService::previewBoardDefinition($payload, $boardCode);
+        $maxStep = max(-1, count($board['steps'] ?? []) - 1);
+        $step = max(-1, min($maxStep, (int) ($input['step'] ?? $maxStep)));
+        mileage_json([
+            'ok' => true,
+            'previewOnly' => true,
+            'requiresLogin' => false,
+            'serviceUnavailable' => false,
+            'board' => $board,
+            'summary' => [
+                'boardCode' => (string) ($board['boardCode'] ?? $boardCode),
+                'lifetimeSteps' => max(0, $step + 1),
+                'positionStep' => $step,
+                'lastAnimatedStep' => $step,
+                'pendingSteps' => 0,
+                'pendingWalkCount' => 0,
+                'badgeCount' => 0,
+                'finished' => $maxStep >= 0 && $step >= $maxStep,
+                'claimableRewardCount' => 0,
+                'claimedRewardIds' => [],
+                'requiresLogin' => false,
+            ],
+            'progress' => [
+                'lifetimeSteps' => max(0, $step + 1),
+                'positionStep' => $step,
+                'lastAnimatedStep' => $step,
+                'finished' => $maxStep >= 0 && $step >= $maxStep,
+            ],
+            'pending' => [
+                'startStepIndex' => null,
+                'endStepIndex' => null,
+                'previewRewards' => [],
+            ],
+            'players' => [],
+            'self' => [
+                'userId' => 'preview-self',
+                'displayName' => 'ME',
+                'avatarUrl' => '',
+                'lifetimeSteps' => max(0, $step + 1),
+                'positionStep' => $step,
+            ],
+            'leaderboard' => [
+                'all' => [],
+                'weekly' => [],
+            ],
+        ]);
+    }
+
+    if ($action === 'save_draft') {
+        if (!mileage_save_allowed()) {
+            mileage_json([
+                'ok' => false,
+                'code' => 'FORBIDDEN',
+                'message' => 'draft save is restricted',
+            ], 403);
+        }
+        $payload = is_array($input['board'] ?? null) ? $input['board'] : [];
+        $board = GachaMileageService::saveDraftDefinition($payload, $boardCode);
+        mileage_json([
+            'ok' => true,
+            'saveAllowed' => true,
+            'board' => $board,
+            'hasDataUrl' => str_contains(json_encode($board, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '', '"data:'),
+            'versions' => GachaMileageService::versionManifest($boardCode),
+        ]);
+    }
+
+    if ($action === 'publish_draft') {
+        if (!mileage_save_allowed()) {
+            mileage_json([
+                'ok' => false,
+                'code' => 'FORBIDDEN',
+                'message' => 'draft publish is restricted',
+            ], 403);
+        }
+        $payload = is_array($input['board'] ?? null) ? $input['board'] : null;
+        $result = GachaMileageService::publishDraftDefinition($boardCode, $payload);
+        mileage_json(['ok' => true, 'saveAllowed' => true] + $result);
+    }
+
+    if ($action === 'rollback_version') {
+        if (!mileage_save_allowed()) {
+            mileage_json([
+                'ok' => false,
+                'code' => 'FORBIDDEN',
+                'message' => 'version rollback is restricted',
+            ], 403);
+        }
+        $versionId = trim((string) ($input['versionId'] ?? ''));
+        $publish = filter_var($input['publish'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $result = GachaMileageService::rollbackVersion($boardCode, $versionId, $publish);
+        mileage_json(['ok' => true, 'saveAllowed' => true] + $result);
+    }
+
+    if ($action === 'upload_asset') {
+        mileage_json(mileage_upload_asset($input));
+    }
+
+    if ($action === 'list_assets') {
+        mileage_json(mileage_list_assets());
+    }
+
+    if ($action === 'preview_reward') {
+        $reward = is_array($input['reward'] ?? null) ? $input['reward'] : [];
+        mileage_json(GachaMileageService::previewRewardDefinition($reward, $boardCode));
+    }
 
     if ($action === 'tool_bootstrap' || $action === 'board') {
         mileage_json([
@@ -237,7 +539,16 @@ try {
     if ($action === 'leaderboard') {
         mileage_json([
             'ok' => true,
-            'leaderboard' => GachaMileageService::leaderboard($guildId, $boardCode),
+            'leaderboard' => GachaMileageService::leaderboard($guildId, $boardCode, 300, $userId),
+        ]);
+    }
+
+    if ($action === 'step_players') {
+        $stepIndex = max(-1, (int) ($input['stepIndex'] ?? -1));
+        mileage_json([
+            'ok' => true,
+            'stepIndex' => $stepIndex,
+            'players' => GachaMileageService::stepPlayers($guildId, $boardCode, $stepIndex),
         ]);
     }
 
@@ -280,6 +591,16 @@ try {
                     'all' => [],
                     'weekly' => [],
                 ],
+            ]);
+        }
+
+        if ($action === 'step_players') {
+            mileage_json([
+                'ok' => true,
+                'serviceUnavailable' => true,
+                'serviceMessage' => 'player database unavailable',
+                'stepIndex' => max(-1, (int) ($input['stepIndex'] ?? -1)),
+                'players' => [],
             ]);
         }
 

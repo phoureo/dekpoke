@@ -45,8 +45,8 @@
             <input type="number" min="1" step="1" name="amount" id="earnManualAmount" value="1">
           </div>
           <div class="field">
-            <label>Reason</label>
-            <input name="reason" placeholder="เหตุผลในการแจก / campaign / ชดเชย">
+            <label>Reason <span class="orbit-required">*</span></label>
+            <input name="reason" required placeholder="ต้องระบุเหตุผล เช่น campaign / ชดเชย / แก้ยอด">
           </div>
         </div>
         <div class="orbit-picker-stack">

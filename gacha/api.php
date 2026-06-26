@@ -560,6 +560,79 @@ function sync_spin_history_for_draw(array $draw): void
     }
 }
 
+function gacha_reward_service(): ?GachaRewardSettlementService
+{
+    if (!($GLOBALS['bootstrapReady'] ?? false) || !class_exists('GachaRewardSettlementService')) {
+        return null;
+    }
+
+    return new GachaRewardSettlementService();
+}
+
+function stored_balls_payload(int $limit = 50): array
+{
+    $owner = gacha_balance_owner();
+    $service = gacha_reward_service();
+    if (!$owner || !$service) {
+        return [];
+    }
+
+    try {
+        return $service->storedBalls(
+            (string) ($owner['guildId'] ?? ''),
+            (string) ($owner['userId'] ?? ''),
+            $limit
+        );
+    } catch (Throwable) {
+        return [];
+    }
+}
+
+function store_active_draw_as_ball(array $draw, string $reason): ?array
+{
+    $owner = gacha_balance_owner();
+    $service = gacha_reward_service();
+    $drawId = (string) ($draw['drawId'] ?? '');
+    if (!$owner || !$service || $drawId === '') {
+        return null;
+    }
+
+    try {
+        $storedBall = $service->storeAbandonedDraw(
+            (string) ($owner['guildId'] ?? ''),
+            (string) ($owner['userId'] ?? ''),
+            $draw,
+            $reason
+        );
+        unset($_SESSION['gacha_draws'][$drawId]);
+        if ((string) ($_SESSION['gacha_active_draw_id'] ?? '') === $drawId) {
+            unset($_SESSION['gacha_active_draw_id']);
+        }
+        forget_persistent_pending_draw($drawId, 'active');
+        return $storedBall;
+    } catch (Throwable) {
+        return null;
+    }
+}
+
+function maybe_store_stale_active_draw(?array $draw, int $staleSeconds = 300): ?array
+{
+    if (!$draw || !empty($draw['completedAt']) || !empty($draw['refundedAt'])) {
+        return $draw;
+    }
+
+    $startedAt = max(
+        (int) ($draw['spinCommittedAt'] ?? 0),
+        (int) ($draw['createdAt'] ?? 0)
+    );
+    if ($startedAt <= 0 || time() - $startedAt < max(30, $staleSeconds)) {
+        return $draw;
+    }
+
+    $storedBall = store_active_draw_as_ball($draw, 'status_stale_active');
+    return $storedBall ? null : $draw;
+}
+
 function mark_gacha_report_live_update(string $updateType, string $drawId = '', array $metadata = []): void
 {
     if (!($GLOBALS['bootstrapReady'] ?? false) || !class_exists('LiveUpdateService')) {
@@ -1683,6 +1756,74 @@ function public_prize(array $prize, array $tier): array
     ];
 }
 
+function create_prepared_draw_for_context(
+    array $config,
+    array $context,
+    array $button,
+    int $buttonId,
+    string $prepareMode = 'warm'
+): array {
+    $signature = (string) ($context['signature'] ?? '');
+    $tier = pick_tier($config, ($context['requestedType'] ?? '') !== '' ? (string) $context['requestedType'] : ($context['conditionTierId'] ?? null));
+    $prize = pick_prize($config, (string) ($tier['id'] ?? 'common'));
+    if (($GLOBALS['bootstrapReady'] ?? false) && class_exists('GachaConfigService')) {
+        $prize = GachaConfigService::prizeWithRolledRoleDuration($prize);
+    }
+
+    $now = time();
+    return persist_prepared_draw([
+        'drawId' => bin2hex(random_bytes(12)),
+        'nonce' => bin2hex(random_bytes(16)),
+        'drawStatus' => 'prepared',
+        'prepareMode' => $prepareMode,
+        'count' => max(1, (int) ($context['count'] ?? 1)),
+        'candidateCount' => max(1, (int) ($context['count'] ?? 1)),
+        'buttonId' => (int) ($button['buttonId'] ?? $buttonId),
+        'currency' => (string) ($button['currency'] ?? default_currency($config, $buttonId)),
+        'requestedType' => (string) ($context['requestedType'] ?? ''),
+        'signature' => $signature,
+        'condition' => !empty($context['conditionTierId'])
+            ? ['type' => 'pity', 'tierId' => (string) $context['conditionTierId']]
+            : null,
+        'lockedType' => (string) ($tier['id'] ?? 'common'),
+        'tier' => $tier,
+        'prize' => public_prize($prize, $tier),
+        'preparedAt' => $now,
+        'createdAt' => $now,
+        'originalCreatedAt' => $now,
+        'visualSeed' => random_int(100000, 999999999),
+        'revealedAt' => null,
+        'ballIssuedAt' => null,
+        'ballSeenAt' => null,
+        'prizeResolvedAt' => null,
+        'completedAt' => null,
+    ]);
+}
+
+function next_prepared_draw_payload_for_response(array $config, array $input, array $draw = []): ?array
+{
+    try {
+        $buttonId = max(1, (int) ($input['buttonId'] ?? $draw['buttonId'] ?? $config['settings']['defaultButtonId'] ?? 1));
+        $button = spin_button($config, $buttonId);
+        if (array_key_exists('enabled', $button) && empty($button['enabled'])) {
+            return null;
+        }
+
+        $contextInput = $input;
+        $contextInput['buttonId'] = $buttonId;
+        $context = draw_request_context($config, $contextInput, 1);
+        $signature = (string) ($context['signature'] ?? '');
+        $prepared = $signature !== '' ? prepared_next_draw($config, $signature) : null;
+        if (!$prepared) {
+            $prepared = create_prepared_draw_for_context($config, $context, $button, $buttonId, 'warm');
+        }
+
+        return prepared_draw_payload($prepared, $config);
+    } catch (Throwable) {
+        return null;
+    }
+}
+
 function commit_prepared_draw_for_complete(array $config, array $input, string $drawId, array $draw, int $buttonId, string $fallbackCurrency): array
 {
     $count = max(1, min(1, (int) ($input['count'] ?? ($draw['candidateCount'] ?? $draw['count'] ?? 1))));
@@ -1957,6 +2098,7 @@ if ($action === 'status' || $action === 'claim_status') {
     }
     $isAuthenticated = gacha_is_authenticated();
     $pendingDraw = $isAuthenticated ? active_pending_draw($config) : null;
+    $pendingDraw = $isAuthenticated ? maybe_store_stale_active_draw($pendingDraw, 300) : null;
     $blockingPendingDraw = ($pendingDraw && empty($pendingDraw['refundedAt'])) ? $pendingDraw : null;
     $preparedContext = draw_request_context($config, $input, 1);
     $includePrepared = (string) ($input['prepared'] ?? '1') !== '0';
@@ -1971,6 +2113,7 @@ if ($action === 'status' || $action === 'claim_status') {
         'requiresLogin' => !$isAuthenticated,
         'pendingDraw' => $blockingPendingDraw ? pending_draw_payload($blockingPendingDraw, $config) : null,
         'preparedDraw' => $preparedDraw ? prepared_draw_payload($preparedDraw, $config) : null,
+        'storedBalls' => $isAuthenticated ? stored_balls_payload(50) : [],
         'dbReady' => $GLOBALS['bootstrapReady'] ?? false,
     ];
 
@@ -2052,7 +2195,7 @@ if ($action === 'reset_mock_credit') {
     ]);
 }
 
-if (!in_array($action, ['prepare', 'confirm_start', 'discard_prepare', 'start', 'reveal', 'reveal_ball', 'mark_ball_seen', 'resolve_prize', 'complete', 'refund_pending', 'ack_offline_summary'], true)) {
+if (!in_array($action, ['prepare', 'confirm_start', 'discard_prepare', 'start', 'reveal', 'reveal_ball', 'mark_ball_seen', 'resolve_prize', 'complete', 'abandon_round', 'open_stored_ball', 'refund_pending', 'ack_offline_summary'], true)) {
     json_response([
         'ok' => false,
         'code' => 'UNKNOWN_ACTION',
@@ -2103,6 +2246,75 @@ if ($action === 'ack_offline_summary') {
         'campaignCounter' => campaign_counter_payload(),
         'freeSpin' => gacha_free_spin_payload(false),
     ]);
+}
+
+if ($action === 'abandon_round') {
+    $lookup = lookup_draw_by_token($input, $config, ['active']);
+    $storedBall = null;
+    if (!empty($lookup['ok']) && is_array($lookup['draw'] ?? null)) {
+        $storedBall = store_active_draw_as_ball($lookup['draw'], 'client_abandon');
+    }
+
+    $balances = balances($config);
+    json_response([
+        'ok' => true,
+        'abandoned' => $storedBall !== null,
+        'storedBall' => $storedBall,
+        'storedBalls' => stored_balls_payload(50),
+        'balance' => $balances[$currency] ?? 0,
+        'balances' => $balances,
+        'currency' => $currency,
+        'campaignCounter' => campaign_counter_payload(),
+        'freeSpin' => gacha_free_spin_payload(false),
+    ]);
+}
+
+if ($action === 'open_stored_ball') {
+    $owner = gacha_balance_owner();
+    $service = gacha_reward_service();
+    $storedBallId = max(0, (int) ($input['storedBallId'] ?? $input['gachaStoredBallId'] ?? $input['ballId'] ?? 0));
+    if (!$owner || !$service || $storedBallId <= 0) {
+        $balances = balances($config);
+        json_response([
+            'ok' => false,
+            'code' => 'STORED_BALL_REQUIRED',
+            'error' => 'stored ball required',
+            'balance' => $balances[$currency] ?? 0,
+            'balances' => $balances,
+            'currency' => $currency,
+        ], 400);
+    }
+
+    try {
+        $result = $service->openStoredBall(
+            (string) ($owner['guildId'] ?? ''),
+            (string) ($owner['userId'] ?? ''),
+            $storedBallId
+        );
+        $balances = balances($config);
+        json_response([
+            'ok' => true,
+            'opened' => true,
+            'result' => $result,
+            'storedBalls' => stored_balls_payload(50),
+            'balance' => $balances[$currency] ?? 0,
+            'balances' => $balances,
+            'currency' => $currency,
+            'campaignCounter' => campaign_counter_payload(),
+            'freeSpin' => gacha_free_spin_payload(false),
+            'mileageSummary' => is_array($result['settlement']['mileageSummary'] ?? null) ? $result['settlement']['mileageSummary'] : null,
+        ]);
+    } catch (Throwable $exception) {
+        $balances = balances($config);
+        json_response([
+            'ok' => false,
+            'code' => $exception->getMessage() ?: 'OPEN_STORED_BALL_FAILED',
+            'error' => 'open stored ball failed',
+            'balance' => $balances[$currency] ?? 0,
+            'balances' => $balances,
+            'currency' => $currency,
+        ], 400);
+    }
 }
 
 if ($action === 'refund_pending') {
@@ -2175,8 +2387,35 @@ if ($action === 'refund_pending') {
 }
 
 if ($action === 'complete') {
-    $lookup = lookup_draw_by_token($input, $config, ['active', 'prepared']);
+    $lookup = lookup_draw_by_token($input, $config, ['active']);
     if (empty($lookup['ok'])) {
+        $owner = gacha_balance_owner();
+        $tokenData = parse_draw_token(draw_token_from_input($input), $config);
+        $drawId = is_array($tokenData) ? (string) ($tokenData['drawId'] ?? '') : '';
+        $settlement = ($owner && $drawId !== '' && ($service = gacha_reward_service()))
+            ? $service->settlementForDraw((string) ($owner['guildId'] ?? ''), $drawId)
+            : null;
+        if ($settlement) {
+            $balances = balances($config);
+            $settlementStatus = (string) ($settlement['status'] ?? '');
+            json_response([
+                'ok' => true,
+                'completed' => true,
+                'alreadyAccepted' => true,
+                'alreadySettled' => $settlementStatus === 'settled',
+                'settlementStatus' => $settlementStatus,
+                'balance' => $balances[$currency] ?? 0,
+                'balances' => $balances,
+                'currency' => $currency,
+                'campaignCounter' => campaign_counter_payload(),
+                'freeSpin' => gacha_free_spin_payload(false),
+                'nextPreparedDraw' => next_prepared_draw_payload_for_response($config, $input),
+                'mileageSummary' => $settlementStatus === 'settled' && is_array($settlement['result']['mileageSummary'] ?? null)
+                    ? $settlement['result']['mileageSummary']
+                    : null,
+            ]);
+        }
+
         $balances = balances($config);
         json_response([
             'ok' => false,
@@ -2190,33 +2429,12 @@ if ($action === 'complete') {
 
     $drawId = (string) ($lookup['drawId'] ?? '');
     $draw = is_array($lookup['draw'] ?? null) ? $lookup['draw'] : [];
-    $sourceDrawStatus = (string) ($lookup['drawStatus'] ?? 'active');
-    $completeButtonId = max(0, (int) ($input['buttonId'] ?? ($draw['buttonId'] ?? $buttonId)));
-
-    if ($sourceDrawStatus === 'prepared') {
-        $commit = commit_prepared_draw_for_complete($config, $input, $drawId, $draw, $completeButtonId, $currency);
-        if (empty($commit['ok'])) {
-            json_response(
-                is_array($commit['payload'] ?? null) ? $commit['payload'] : [
-                    'ok' => false,
-                    'code' => 'COMPLETE_FAILED',
-                    'error' => 'complete failed',
-                ],
-                (int) ($commit['status'] ?? 409)
-            );
-        }
-        $draw = is_array($commit['draw'] ?? null) ? $commit['draw'] : $draw;
-        mark_gacha_report_live_update('gacha_spin_start', $drawId, [
-            'drawStatus' => 'started',
-            'currency' => (string) ($draw['currency'] ?? $currency),
-            'tierId' => (string) ($draw['lockedType'] ?? ''),
-            'prizeId' => (string) (($draw['prize']['id'] ?? '')),
-            'preparedDraw' => true,
-            'commitAtComplete' => true,
-        ]);
-    }
-
-    $draw['completedAt'] = time();
+    $now = time();
+    $draw['revealedAt'] = $draw['revealedAt'] ?? $now;
+    $draw['ballIssuedAt'] = $draw['ballIssuedAt'] ?? $now;
+    $draw['ballSeenAt'] = $draw['ballSeenAt'] ?? $now;
+    $draw['prizeResolvedAt'] = $draw['prizeResolvedAt'] ?? $now;
+    $draw['completedAt'] = $draw['completedAt'] ?? $now;
     $draw = persist_active_draw($draw);
 
     unset($_SESSION['gacha_draws'][$drawId]);
@@ -2227,32 +2445,17 @@ if ($action === 'complete') {
     mark_gacha_report_live_update('gacha_spin_complete', $drawId, ['drawStatus' => 'completed']);
 
     $owner = gacha_balance_owner();
-    close_session_write_lock();
-
-    $mileageSummary = null;
-    if (
-        is_array($owner)
-        && !empty($owner['guildId'])
-        && !empty($owner['userId'])
-        && ($GLOBALS['bootstrapReady'] ?? false)
-        && class_exists('GachaMileageService')
-    ) {
+    if (is_array($owner) && !empty($owner['guildId']) && !empty($owner['userId']) && ($service = gacha_reward_service())) {
         try {
-            $mileageSummary = GachaMileageService::recordCompletedSpin(
-                (string) $owner['guildId'],
-                (string) $owner['userId'],
-                $drawId,
-                max(1, (int) ($draw['count'] ?? 1))
+            $service->enqueueCompletedDraw(
+                (string) ($owner['guildId'] ?? ''),
+                (string) ($owner['userId'] ?? ''),
+                $draw,
+                'gacha_complete',
+                $drawId
             );
-        } catch (Throwable $exception) {
-            $mileageSummary = null;
-            error_log(sprintf(
-                '[gacha mileage] complete failed guild=%s user=%s draw=%s error=%s',
-                (string) $owner['guildId'],
-                (string) $owner['userId'],
-                $drawId,
-                $exception->getMessage()
-            ));
+        } catch (Throwable) {
+            // The after-response settlement path will retry creating the row.
         }
     }
 
@@ -2266,28 +2469,26 @@ if ($action === 'complete') {
         'currency' => $drawCurrency,
         'campaignCounter' => is_array($draw['campaignCounter'] ?? null) ? $draw['campaignCounter'] : campaign_counter_payload(),
         'freeSpin' => gacha_free_spin_payload(true),
-        'mileageSummary' => $mileageSummary,
+        'nextPreparedDraw' => next_prepared_draw_payload_for_response($config, $input, $draw),
+        'mileageSummary' => null,
     ];
 
-    if (
-        is_array($owner)
-        && !empty($owner['guildId'])
-        && !empty($owner['userId'])
-        && ($GLOBALS['bootstrapReady'] ?? false)
-        && class_exists('GachaRoleGrantService')
-    ) {
-        try {
-            (new GachaRoleGrantService())->queueForDraw(
-                (string) ($owner['guildId'] ?? ''),
-                (string) ($owner['userId'] ?? ''),
-                $draw
-            );
-        } catch (Throwable) {
-            // Role grants are best-effort and must never block completing the gacha round.
+    json_response_and_continue($responsePayload, static function () use ($owner, $draw): void {
+        if (!is_array($owner) || empty($owner['guildId']) || empty($owner['userId'])) {
+            return;
         }
-    }
-
-    json_response($responsePayload);
+        $service = gacha_reward_service();
+        if (!$service) {
+            return;
+        }
+        $service->settleCompletedDraw(
+            (string) ($owner['guildId'] ?? ''),
+            (string) ($owner['userId'] ?? ''),
+            $draw,
+            'gacha_complete',
+            (string) ($draw['drawId'] ?? '')
+        );
+    });
 }
 
 if ($action === 'discard_prepare') {
@@ -2383,41 +2584,7 @@ if ($action === 'prepare') {
         ], 423);
     }
 
-    $tier = pick_tier($config, ($context['requestedType'] ?? '') !== '' ? (string) $context['requestedType'] : ($context['conditionTierId'] ?? null));
-    $prize = pick_prize($config, (string) ($tier['id'] ?? 'common'));
-    if (($GLOBALS['bootstrapReady'] ?? false) && class_exists('GachaConfigService')) {
-        $prize = GachaConfigService::prizeWithRolledRoleDuration($prize);
-    }
-    $prizePayload = public_prize($prize, $tier);
-    $now = time();
-    $preparedDraw = [
-        'drawId' => bin2hex(random_bytes(12)),
-        'nonce' => bin2hex(random_bytes(16)),
-        'drawStatus' => 'prepared',
-        'prepareMode' => $prepareMode,
-        'count' => $count,
-        'candidateCount' => $count,
-        'buttonId' => (int) ($button['buttonId'] ?? $buttonId),
-        'currency' => (string) ($button['currency'] ?? default_currency($config, $buttonId)),
-        'requestedType' => (string) ($context['requestedType'] ?? ''),
-        'signature' => $signature,
-        'condition' => !empty($context['conditionTierId'])
-            ? ['type' => 'pity', 'tierId' => (string) $context['conditionTierId']]
-            : null,
-        'lockedType' => (string) ($tier['id'] ?? 'common'),
-        'tier' => $tier,
-        'prize' => $prizePayload,
-        'preparedAt' => $now,
-        'createdAt' => $now,
-        'originalCreatedAt' => $now,
-        'visualSeed' => random_int(100000, 999999999),
-        'revealedAt' => null,
-        'ballIssuedAt' => null,
-        'ballSeenAt' => null,
-        'prizeResolvedAt' => null,
-        'completedAt' => null,
-    ];
-    $preparedDraw = persist_prepared_draw($preparedDraw);
+    $preparedDraw = create_prepared_draw_for_context($config, $context, $button, $buttonId, $prepareMode);
     $payload = prepared_draw_payload($preparedDraw, $config);
     json_response(array_merge([
         'ok' => true,
@@ -2707,6 +2874,7 @@ if ($action === 'confirm_start') {
     $draw['reusedPendingReward'] = !empty($draw['preparedAt']) || !empty($draw['reusedPendingReward']);
     $draw['prepareMode'] = (string) ($draw['prepareMode'] ?? 'press');
     $draw['createdAt'] = time();
+    $draw['spinCommittedAt'] = $draw['createdAt'];
     $draw['revealedAt'] = null;
     $draw['ballIssuedAt'] = null;
     $draw['ballSeenAt'] = null;
@@ -2730,6 +2898,15 @@ if ($action === 'confirm_start') {
         'preparedDraw' => true,
     ]);
 
+    $nextPreparedPayload = null;
+    try {
+        $nextContext = draw_request_context($config, $input, 1);
+        $nextPrepared = create_prepared_draw_for_context($config, $nextContext, $button, $buttonId, 'warm');
+        $nextPreparedPayload = prepared_draw_payload($nextPrepared, $config);
+    } catch (Throwable) {
+        $nextPreparedPayload = null;
+    }
+
     $drawToken = create_draw_token($drawId, (string) ($draw['nonce'] ?? ''), $config);
     json_response([
         'ok' => true,
@@ -2750,6 +2927,7 @@ if ($action === 'confirm_start') {
         'campaignCounter' => $campaignCounter,
         'visualSeed' => (int) ($draw['visualSeed'] ?? 0),
         'reusedPendingReward' => !empty($draw['reusedPendingReward']),
+        'nextPreparedDraw' => $nextPreparedPayload,
     ]);
 }
 

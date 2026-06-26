@@ -17,8 +17,16 @@ Copy `config/config.local.php.example` to `config/config.local.php` and set Disc
 /Applications/XAMPP/xamppfiles/bin/php workers/gateway_worker.php
 /Applications/XAMPP/xamppfiles/bin/php workers/sync_worker.php --loop
 /Applications/XAMPP/xamppfiles/bin/php workers/backfill_worker.php all
-/Applications/XAMPP/xamppfiles/bin/php workers/earn_worker.php
-/Applications/XAMPP/xamppfiles/bin/php workers/gacha_role_worker.php
+/Applications/XAMPP/xamppfiles/bin/php workers/earn_worker.php --loop
+/Applications/XAMPP/xamppfiles/bin/php workers/gacha_role_worker.php --loop --pending-limit=100
+/Applications/XAMPP/xamppfiles/bin/php workers/gacha_reward_worker.php --loop --interval=30 --stale-active-minutes=5 --limit=100
+```
+
+On Windows/XAMPP, use the same flags with the Windows PHP path, for example:
+
+```bat
+C:\xampp\php\php.exe workers\gacha_role_worker.php --loop --pending-limit=100
+C:\xampp\php\php.exe workers\gacha_reward_worker.php --loop --interval=30 --stale-active-minutes=5 --limit=100
 ```
 
 ## Canonical Policy

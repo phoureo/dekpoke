@@ -113,6 +113,7 @@ if (!$setupError && $user) {
           <a class="orbit-nav-item" data-page="earn_settings"><i class="fa-solid fa-coins"></i> <span data-i18n="page.earn_settings">Earn Settings</span></a>
           <a class="orbit-nav-item" data-page="earn_manual"><i class="fa-solid fa-hand-holding-dollar"></i> <span data-i18n="page.earn_manual">Manual Earn</span></a>
           <a class="orbit-nav-item" data-page="reward_report"><i class="fa-solid fa-chart-line"></i> <span data-i18n="page.reward_report">Reward Report</span></a>
+          <a class="orbit-nav-item" data-page="mileage_report"><i class="fa-solid fa-road"></i> <span data-i18n="page.mileage_report">Mileage Report</span></a>
           <a class="orbit-nav-item" data-page="shop_report"><i class="fa-solid fa-receipt"></i> <span data-i18n="page.shop_report">Shop Report</span></a>
           <a class="orbit-nav-item" data-page="shop_member_bags"><i class="fa-solid fa-bag-shopping"></i> <span data-i18n="page.shop_member_bags">Member Bags</span></a>
           <a class="orbit-nav-item" data-page="bag_transaction_report"><i class="fa-solid fa-arrow-right-arrow-left"></i> <span data-i18n="page.bag_transaction_report">Bag Transactions</span></a>

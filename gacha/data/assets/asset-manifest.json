@@ -1,0 +1,778 @@
+{
+    "version": 1,
+    "meta": {
+        "gameVersion": "legacy-runtime",
+        "contentVersion": "legacy-assets",
+        "updatedAt": "2026-06-26T06:44:33+07:00",
+        "notes": "Generated from current runtime defaults until the first publish."
+    },
+    "groups": [
+        {
+            "id": "shell",
+            "label": "Shell",
+            "pages": [
+                "gacha-index"
+            ],
+            "preloadLabel": "Loading shell",
+            "order": 10
+        },
+        {
+            "id": "room",
+            "label": "Room",
+            "pages": [
+                "gacha-index"
+            ],
+            "preloadLabel": "Loading room",
+            "order": 20
+        },
+        {
+            "id": "machine",
+            "label": "Machine",
+            "pages": [
+                "gacha-index"
+            ],
+            "preloadLabel": "Loading machine",
+            "order": 30
+        },
+        {
+            "id": "balls",
+            "label": "Balls",
+            "pages": [
+                "gacha-index"
+            ],
+            "preloadLabel": "Loading balls",
+            "order": 40
+        },
+        {
+            "id": "effects",
+            "label": "Effects",
+            "pages": [
+                "gacha-index"
+            ],
+            "preloadLabel": "Loading effects",
+            "order": 50
+        },
+        {
+            "id": "ui",
+            "label": "UI",
+            "pages": [
+                "gacha-index"
+            ],
+            "preloadLabel": "Loading UI",
+            "order": 60
+        },
+        {
+            "id": "reward-ball",
+            "label": "Reward Ball",
+            "pages": [
+                "gacha-index"
+            ],
+            "preloadLabel": "Loading reward ball",
+            "order": 70
+        },
+        {
+            "id": "rewards",
+            "label": "Rewards",
+            "pages": [
+                "gacha-index"
+            ],
+            "preloadLabel": "Loading rewards",
+            "order": 80
+        },
+        {
+            "id": "buttons",
+            "label": "Buttons",
+            "pages": [
+                "gacha-index"
+            ],
+            "preloadLabel": "Loading buttons",
+            "order": 90
+        },
+        {
+            "id": "counter",
+            "label": "Counter",
+            "pages": [
+                "gacha-index"
+            ],
+            "preloadLabel": "Loading counter",
+            "order": 100
+        },
+        {
+            "id": "switch",
+            "label": "Switch",
+            "pages": [
+                "gacha-index"
+            ],
+            "preloadLabel": "Loading switch",
+            "order": 110
+        },
+        {
+            "id": "mileage-board",
+            "label": "Mileage Board",
+            "pages": [
+                "mileage-runtime"
+            ],
+            "preloadLabel": "Loading mileage board",
+            "order": 200
+        },
+        {
+            "id": "mileage-sprites",
+            "label": "Mileage Sprites",
+            "pages": [
+                "mileage-runtime"
+            ],
+            "preloadLabel": "Loading mileage sprites",
+            "order": 210
+        },
+        {
+            "id": "mileage-icons",
+            "label": "Mileage Icons",
+            "pages": [
+                "mileage-runtime"
+            ],
+            "preloadLabel": "Loading mileage icons",
+            "order": 220
+        },
+        {
+            "id": "mileage-decor",
+            "label": "Mileage Decor",
+            "pages": [
+                "mileage-runtime"
+            ],
+            "preloadLabel": "Loading mileage decor",
+            "order": 230
+        }
+    ],
+    "assets": [
+        {
+            "path": "images/ball_1-1.png",
+            "pages": [
+                "gacha-index"
+            ],
+            "groupId": "reward-ball",
+            "cachePolicy": "no-store",
+            "versionMode": "none",
+            "customVersion": "",
+            "mimeType": "",
+            "enabled": true,
+            "preload": true,
+            "notes": ""
+        },
+        {
+            "path": "images/ball_1-2.png",
+            "pages": [
+                "gacha-index"
+            ],
+            "groupId": "reward-ball",
+            "cachePolicy": "no-store",
+            "versionMode": "none",
+            "customVersion": "",
+            "mimeType": "",
+            "enabled": true,
+            "preload": true,
+            "notes": ""
+        },
+        {
+            "path": "images/ball_1-3.png",
+            "pages": [
+                "gacha-index"
+            ],
+            "groupId": "reward-ball",
+            "cachePolicy": "no-store",
+            "versionMode": "none",
+            "customVersion": "",
+            "mimeType": "",
+            "enabled": true,
+            "preload": true,
+            "notes": ""
+        },
+        {
+            "path": "images/ball_1-4.png",
+            "pages": [
+                "gacha-index"
+            ],
+            "groupId": "reward-ball",
+            "cachePolicy": "no-store",
+            "versionMode": "none",
+            "customVersion": "",
+            "mimeType": "",
+            "enabled": true,
+            "preload": true,
+            "notes": ""
+        },
+        {
+            "path": "images/ball_1.png",
+            "pages": [
+                "gacha-index"
+            ],
+            "groupId": "balls",
+            "cachePolicy": "no-store",
+            "versionMode": "none",
+            "customVersion": "",
+            "mimeType": "",
+            "enabled": true,
+            "preload": true,
+            "notes": ""
+        },
+        {
+            "path": "images/ball_2.png",
+            "pages": [
+                "gacha-index"
+            ],
+            "groupId": "balls",
+            "cachePolicy": "no-store",
+            "versionMode": "none",
+            "customVersion": "",
+            "mimeType": "",
+            "enabled": true,
+            "preload": true,
+            "notes": ""
+        },
+        {
+            "path": "images/ball_3.png",
+            "pages": [
+                "gacha-index"
+            ],
+            "groupId": "balls",
+            "cachePolicy": "no-store",
+            "versionMode": "none",
+            "customVersion": "",
+            "mimeType": "",
+            "enabled": true,
+            "preload": true,
+            "notes": ""
+        },
+        {
+            "path": "images/ball_4.png",
+            "pages": [
+                "gacha-index"
+            ],
+            "groupId": "balls",
+            "cachePolicy": "no-store",
+            "versionMode": "none",
+            "customVersion": "",
+            "mimeType": "",
+            "enabled": true,
+            "preload": true,
+            "notes": ""
+        },
+        {
+            "path": "images/ball_5.png",
+            "pages": [
+                "gacha-index"
+            ],
+            "groupId": "balls",
+            "cachePolicy": "no-store",
+            "versionMode": "none",
+            "customVersion": "",
+            "mimeType": "",
+            "enabled": true,
+            "preload": true,
+            "notes": ""
+        },
+        {
+            "path": "images/btn_3.png",
+            "pages": [
+                "gacha-index"
+            ],
+            "groupId": "buttons",
+            "cachePolicy": "default",
+            "versionMode": "none",
+            "customVersion": "",
+            "mimeType": "",
+            "enabled": true,
+            "preload": true,
+            "notes": ""
+        },
+        {
+            "path": "images/btn_4-1.png",
+            "pages": [
+                "gacha-index"
+            ],
+            "groupId": "buttons",
+            "cachePolicy": "default",
+            "versionMode": "none",
+            "customVersion": "",
+            "mimeType": "",
+            "enabled": true,
+            "preload": true,
+            "notes": ""
+        },
+        {
+            "path": "images/btn_4.png",
+            "pages": [
+                "gacha-index"
+            ],
+            "groupId": "buttons",
+            "cachePolicy": "default",
+            "versionMode": "none",
+            "customVersion": "",
+            "mimeType": "",
+            "enabled": true,
+            "preload": true,
+            "notes": ""
+        },
+        {
+            "path": "images/btn_5-1.png",
+            "pages": [
+                "gacha-index"
+            ],
+            "groupId": "buttons",
+            "cachePolicy": "default",
+            "versionMode": "none",
+            "customVersion": "",
+            "mimeType": "",
+            "enabled": true,
+            "preload": true,
+            "notes": ""
+        },
+        {
+            "path": "images/btn_5.png",
+            "pages": [
+                "gacha-index"
+            ],
+            "groupId": "buttons",
+            "cachePolicy": "default",
+            "versionMode": "none",
+            "customVersion": "",
+            "mimeType": "",
+            "enabled": true,
+            "preload": true,
+            "notes": ""
+        },
+        {
+            "path": "images/btn_6.png",
+            "pages": [
+                "gacha-index"
+            ],
+            "groupId": "buttons",
+            "cachePolicy": "default",
+            "versionMode": "none",
+            "customVersion": "",
+            "mimeType": "",
+            "enabled": true,
+            "preload": true,
+            "notes": ""
+        },
+        {
+            "path": "images/icon_1.png",
+            "pages": [
+                "gacha-index"
+            ],
+            "groupId": "ui",
+            "cachePolicy": "default",
+            "versionMode": "none",
+            "customVersion": "",
+            "mimeType": "",
+            "enabled": true,
+            "preload": true,
+            "notes": ""
+        },
+        {
+            "path": "images/icon_2.png",
+            "pages": [
+                "gacha-index"
+            ],
+            "groupId": "ui",
+            "cachePolicy": "default",
+            "versionMode": "none",
+            "customVersion": "",
+            "mimeType": "",
+            "enabled": true,
+            "preload": true,
+            "notes": ""
+        },
+        {
+            "path": "images/icon_3.png",
+            "pages": [
+                "gacha-index"
+            ],
+            "groupId": "ui",
+            "cachePolicy": "default",
+            "versionMode": "none",
+            "customVersion": "",
+            "mimeType": "",
+            "enabled": true,
+            "preload": true,
+            "notes": ""
+        },
+        {
+            "path": "images/icon_4.png",
+            "pages": [
+                "gacha-index"
+            ],
+            "groupId": "ui",
+            "cachePolicy": "default",
+            "versionMode": "none",
+            "customVersion": "",
+            "mimeType": "",
+            "enabled": true,
+            "preload": true,
+            "notes": ""
+        },
+        {
+            "path": "images/icon_5.png",
+            "pages": [
+                "gacha-index"
+            ],
+            "groupId": "ui",
+            "cachePolicy": "default",
+            "versionMode": "none",
+            "customVersion": "",
+            "mimeType": "",
+            "enabled": true,
+            "preload": true,
+            "notes": ""
+        },
+        {
+            "path": "images/img_Asset 10.png",
+            "pages": [
+                "gacha-index"
+            ],
+            "groupId": "machine",
+            "cachePolicy": "default",
+            "versionMode": "none",
+            "customVersion": "",
+            "mimeType": "",
+            "enabled": true,
+            "preload": true,
+            "notes": ""
+        },
+        {
+            "path": "images/img_Asset 13.png",
+            "pages": [
+                "gacha-index"
+            ],
+            "groupId": "effects",
+            "cachePolicy": "default",
+            "versionMode": "none",
+            "customVersion": "",
+            "mimeType": "",
+            "enabled": true,
+            "preload": true,
+            "notes": ""
+        },
+        {
+            "path": "images/img_Asset 14.png",
+            "pages": [
+                "gacha-index"
+            ],
+            "groupId": "effects",
+            "cachePolicy": "default",
+            "versionMode": "none",
+            "customVersion": "",
+            "mimeType": "",
+            "enabled": true,
+            "preload": true,
+            "notes": ""
+        },
+        {
+            "path": "images/img_Asset 19.png",
+            "pages": [
+                "gacha-index"
+            ],
+            "groupId": "room",
+            "cachePolicy": "default",
+            "versionMode": "none",
+            "customVersion": "",
+            "mimeType": "",
+            "enabled": true,
+            "preload": true,
+            "notes": ""
+        },
+        {
+            "path": "images/img_Asset 20.png",
+            "pages": [
+                "gacha-index"
+            ],
+            "groupId": "room",
+            "cachePolicy": "default",
+            "versionMode": "none",
+            "customVersion": "",
+            "mimeType": "",
+            "enabled": true,
+            "preload": true,
+            "notes": ""
+        },
+        {
+            "path": "images/img_Asset 4.png",
+            "pages": [
+                "gacha-index"
+            ],
+            "groupId": "effects",
+            "cachePolicy": "default",
+            "versionMode": "none",
+            "customVersion": "",
+            "mimeType": "",
+            "enabled": true,
+            "preload": true,
+            "notes": ""
+        },
+        {
+            "path": "images/img_Asset 7.png",
+            "pages": [
+                "gacha-index"
+            ],
+            "groupId": "effects",
+            "cachePolicy": "default",
+            "versionMode": "none",
+            "customVersion": "",
+            "mimeType": "",
+            "enabled": true,
+            "preload": true,
+            "notes": ""
+        },
+        {
+            "path": "images/img_Asset 8-1.png",
+            "pages": [
+                "gacha-index"
+            ],
+            "groupId": "machine",
+            "cachePolicy": "default",
+            "versionMode": "none",
+            "customVersion": "",
+            "mimeType": "",
+            "enabled": true,
+            "preload": true,
+            "notes": ""
+        },
+        {
+            "path": "images/img_Asset 8-2.png",
+            "pages": [
+                "gacha-index"
+            ],
+            "groupId": "machine",
+            "cachePolicy": "no-store",
+            "versionMode": "none",
+            "customVersion": "",
+            "mimeType": "",
+            "enabled": true,
+            "preload": true,
+            "notes": ""
+        },
+        {
+            "path": "images/item-1.png",
+            "pages": [
+                "gacha-index"
+            ],
+            "groupId": "rewards",
+            "cachePolicy": "default",
+            "versionMode": "none",
+            "customVersion": "",
+            "mimeType": "",
+            "enabled": true,
+            "preload": true,
+            "notes": ""
+        },
+        {
+            "path": "images/mileage/main/bg_mileage_20260620_2.jpg",
+            "pages": [
+                "mileage-runtime"
+            ],
+            "groupId": "mileage-board",
+            "cachePolicy": "default",
+            "versionMode": "none",
+            "customVersion": "",
+            "mimeType": "",
+            "enabled": true,
+            "preload": true,
+            "notes": ""
+        },
+        {
+            "path": "images/pic_element_mileage_1.png",
+            "pages": [
+                "mileage-runtime"
+            ],
+            "groupId": "mileage-decor",
+            "cachePolicy": "default",
+            "versionMode": "none",
+            "customVersion": "",
+            "mimeType": "",
+            "enabled": true,
+            "preload": true,
+            "notes": ""
+        },
+        {
+            "path": "images/pic_numberic.png",
+            "pages": [
+                "gacha-index"
+            ],
+            "groupId": "counter",
+            "cachePolicy": "default",
+            "versionMode": "none",
+            "customVersion": "",
+            "mimeType": "",
+            "enabled": true,
+            "preload": true,
+            "notes": ""
+        },
+        {
+            "path": "images/pic_switch-off.png",
+            "pages": [
+                "gacha-index"
+            ],
+            "groupId": "switch",
+            "cachePolicy": "no-store",
+            "versionMode": "none",
+            "customVersion": "",
+            "mimeType": "",
+            "enabled": true,
+            "preload": true,
+            "notes": ""
+        },
+        {
+            "path": "images/pic_switch_on.png",
+            "pages": [
+                "gacha-index"
+            ],
+            "groupId": "switch",
+            "cachePolicy": "no-store",
+            "versionMode": "none",
+            "customVersion": "",
+            "mimeType": "",
+            "enabled": true,
+            "preload": true,
+            "notes": ""
+        },
+        {
+            "path": "images/source_background_2-2.jpg",
+            "pages": [
+                "gacha-index"
+            ],
+            "groupId": "shell",
+            "cachePolicy": "no-store",
+            "versionMode": "none",
+            "customVersion": "",
+            "mimeType": "auto",
+            "enabled": true,
+            "preload": true,
+            "notes": ""
+        },
+        {
+            "path": "images/source_background_2.jpg",
+            "pages": [
+                "gacha-index"
+            ],
+            "groupId": "shell",
+            "cachePolicy": "no-store",
+            "versionMode": "none",
+            "customVersion": "",
+            "mimeType": "auto",
+            "enabled": true,
+            "preload": true,
+            "notes": ""
+        },
+        {
+            "path": "images/ui_2.png",
+            "pages": [
+                "gacha-index"
+            ],
+            "groupId": "ui",
+            "cachePolicy": "default",
+            "versionMode": "none",
+            "customVersion": "",
+            "mimeType": "",
+            "enabled": true,
+            "preload": true,
+            "notes": ""
+        },
+        {
+            "path": "images/ui_5.png",
+            "pages": [
+                "gacha-index"
+            ],
+            "groupId": "buttons",
+            "cachePolicy": "default",
+            "versionMode": "none",
+            "customVersion": "",
+            "mimeType": "",
+            "enabled": true,
+            "preload": true,
+            "notes": ""
+        },
+        {
+            "path": "images/uploads/sprites/sprite_20260625_220346_3a44c2b225.png",
+            "pages": [
+                "mileage-runtime"
+            ],
+            "groupId": "mileage-sprites",
+            "cachePolicy": "default",
+            "versionMode": "none",
+            "customVersion": "",
+            "mimeType": "",
+            "enabled": true,
+            "preload": true,
+            "notes": ""
+        },
+        {
+            "path": "images/uploads/sprites/sprite_20260625_232929_0d82f45144.png",
+            "pages": [
+                "mileage-runtime"
+            ],
+            "groupId": "mileage-sprites",
+            "cachePolicy": "default",
+            "versionMode": "none",
+            "customVersion": "",
+            "mimeType": "",
+            "enabled": true,
+            "preload": true,
+            "notes": ""
+        },
+        {
+            "path": "images/uploads/sprites/sprite_20260625_235021_3987614ff5.png",
+            "pages": [
+                "mileage-runtime"
+            ],
+            "groupId": "mileage-sprites",
+            "cachePolicy": "default",
+            "versionMode": "none",
+            "customVersion": "",
+            "mimeType": "",
+            "enabled": true,
+            "preload": true,
+            "notes": ""
+        },
+        {
+            "path": "images/uploads/sprites/sprite_20260626_025507_90b958dd45.png",
+            "pages": [
+                "mileage-runtime"
+            ],
+            "groupId": "mileage-sprites",
+            "cachePolicy": "default",
+            "versionMode": "none",
+            "customVersion": "",
+            "mimeType": "",
+            "enabled": true,
+            "preload": true,
+            "notes": ""
+        },
+        {
+            "path": "images/uploads/sprites/sprite_20260626_030117_d5fcd9a9c4.png",
+            "pages": [
+                "mileage-runtime"
+            ],
+            "groupId": "mileage-sprites",
+            "cachePolicy": "default",
+            "versionMode": "none",
+            "customVersion": "",
+            "mimeType": "",
+            "enabled": true,
+            "preload": true,
+            "notes": ""
+        },
+        {
+            "path": "images/uploads/sprites/sprite_20260626_032303_27a5b5324c.png",
+            "pages": [
+                "mileage-runtime"
+            ],
+            "groupId": "mileage-sprites",
+            "cachePolicy": "default",
+            "versionMode": "none",
+            "customVersion": "",
+            "mimeType": "",
+            "enabled": true,
+            "preload": true,
+            "notes": ""
+        }
+    ]
+}

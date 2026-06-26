@@ -4,31 +4,15 @@ declare(strict_types=1);
 
 final class ManualEarnGrantService
 {
-    private const RULE_CODE = 'earn_manual_grant';
+    private const RULE_CODE_GRANT = 'earn_manual_grant';
+    private const RULE_CODE_REVOKE = 'earn_manual_revoke';
 
     /** @return array<string, mixed> */
     public function payload(string $guildId, int $limit = 40): array
     {
-        $this->ensureRule();
+        $this->ensureRules();
+
         $units = class_exists('ShopUnitService') ? ShopUnitService::units(true) : [];
-        $recent = Database::fetchAll(
-            'SELECT
-                re.*,
-                rr.ruleName,
-                u.userName,
-                u.globalName,
-                u.avatarHash,
-                COALESCE(m.nickName, u.globalName, u.userName, re.userId) AS displayName
-             FROM tbl_reward_event re
-             INNER JOIN tbl_reward_rule rr ON rr.rewardRuleId = re.rewardRuleId
-             LEFT JOIN tbl_user u ON u.userId = re.userId
-             LEFT JOIN tbl_member m ON m.guildId = re.guildId AND m.userId = re.userId
-             WHERE re.guildId = :guildId
-               AND rr.ruleCode = :ruleCode
-             ORDER BY re.rewardEventId DESC
-             LIMIT ' . max(10, min(100, $limit)),
-            ['guildId' => $guildId, 'ruleCode' => self::RULE_CODE]
-        );
 
         return [
             'units' => array_map(static fn (array $unit): array => [
@@ -39,28 +23,7 @@ final class ManualEarnGrantService
             ], $units),
             'roles' => $this->roles($guildId),
             'memberCount' => $this->activeMemberCount($guildId),
-            'recent' => array_map(static function (array $row): array {
-                $metadata = json_decode((string) ($row['metadataJson'] ?? '{}'), true);
-                $metadata = is_array($metadata) ? $metadata : [];
-                $manualGrant = is_array($metadata['manualGrant'] ?? null) ? $metadata['manualGrant'] : [];
-                $reward = is_array($metadata['reward'] ?? null) ? $metadata['reward'] : [];
-                $unitRewards = is_array($reward['unitRewards'] ?? null) ? $reward['unitRewards'] : [];
-                $freeSpins = max(0, (int) ($reward['gachaFreeSpin'] ?? 0));
-                if ($freeSpins > 0) {
-                    $unitRewards['freeSpin'] = ($unitRewards['freeSpin'] ?? 0) + $freeSpins;
-                }
-                $row['metadata'] = $metadata;
-                $row['manualGrant'] = $manualGrant;
-                $row['unitRewards'] = $unitRewards;
-                $row['reason'] = (string) ($metadata['reason'] ?? '');
-                $row['grantedBy'] = (string) ($metadata['grantedBy']['displayName'] ?? $metadata['grantedBy']['discordUserId'] ?? '');
-                $row['targetType'] = (string) ($manualGrant['targetType'] ?? 'user');
-                $row['targetLabel'] = (string) ($manualGrant['targetLabel'] ?? '');
-                $row['recipientCount'] = max(1, (int) ($manualGrant['recipientCount'] ?? 1));
-                $row['batchId'] = (string) ($manualGrant['batchId'] ?? $row['sourceId'] ?? '');
-                $row['avatarUrl'] = DiscordAssets::avatar((string) ($row['userId'] ?? ''), $row['avatarHash'] ?? null, 64);
-                return $row;
-            }, $recent),
+            'recent' => $this->recentBatches($guildId, $limit),
         ];
     }
 
@@ -115,7 +78,309 @@ final class ManualEarnGrantService
     }
 
     /** @return array<string, mixed> */
+    public function previewSelection(string $guildId, array $payload): array
+    {
+        return $this->selectionPreview($this->prepareSelection($guildId, $payload));
+    }
+
+    /** @return array<string, mixed> */
     public function grantSelection(string $guildId, array $payload, array $adminUser, int $adminActionId): array
+    {
+        $selection = $this->prepareSelection($guildId, $payload);
+        $batchId = $this->batchId();
+        $eventCount = 0;
+        $recipientResults = [];
+
+        foreach ($selection['recipients'] as $recipient) {
+            if ($selection['rewardType'] === 'freeSpin') {
+                for ($index = 1; $index <= $selection['amount']; $index += 1) {
+                    $recipientResults[] = $this->grantToRecipient(
+                        $guildId,
+                        $recipient,
+                        [
+                            'unitRewards' => [],
+                            'gachaFreeSpin' => 1,
+                        ],
+                        $selection['reason'],
+                        $adminUser,
+                        $adminActionId,
+                        [
+                            'batchId' => $batchId,
+                            'eventSourceId' => $batchId . ':' . (string) ($recipient['userId'] ?? '') . ':' . $index,
+                            'targetType' => $selection['targetType'],
+                            'targetId' => $selection['targetId'],
+                            'targetLabel' => $selection['targetLabel'],
+                            'recipientCount' => $selection['recipientCount'],
+                            'rewardType' => $selection['rewardType'],
+                            'amount' => $selection['amount'],
+                            'freeSpinIndex' => $index,
+                            'freeSpinTotal' => $selection['amount'],
+                        ]
+                    );
+                    $eventCount += 1;
+                }
+                continue;
+            }
+
+            $recipientResults[] = $this->grantToRecipient(
+                $guildId,
+                $recipient,
+                [
+                    'unitRewards' => $selection['unitRewardsEach'],
+                    'gachaFreeSpin' => 0,
+                ],
+                $selection['reason'],
+                $adminUser,
+                $adminActionId,
+                [
+                    'batchId' => $batchId,
+                    'targetType' => $selection['targetType'],
+                    'targetId' => $selection['targetId'],
+                    'targetLabel' => $selection['targetLabel'],
+                    'recipientCount' => $selection['recipientCount'],
+                    'rewardType' => $selection['rewardType'],
+                    'amount' => $selection['amount'],
+                ]
+            );
+            $eventCount += 1;
+        }
+
+        LiveUpdateService::markTopic('earn_manual', [
+            'scope' => 'earn_manual_batch',
+            'batchId' => $batchId,
+            'targetType' => $selection['targetType'],
+            'recipientCount' => $selection['recipientCount'],
+            'rewardType' => $selection['rewardType'],
+            'amount' => $selection['amount'],
+        ]);
+
+        return [
+            'batchId' => $batchId,
+            'targetType' => $selection['targetType'],
+            'targetId' => $selection['targetId'],
+            'targetLabel' => $selection['targetLabel'],
+            'recipientCount' => $selection['recipientCount'],
+            'rewardType' => $selection['rewardType'],
+            'amount' => $selection['amount'],
+            'reason' => $selection['reason'],
+            'unitRewards' => $selection['unitRewardsEach'],
+            'unitRewardsEach' => $selection['unitRewardsEach'],
+            'unitRewardsTotal' => $selection['unitRewardsTotal'],
+            'eventCount' => $eventCount,
+            'sampleRecipients' => array_slice(array_map(static fn (array $row): array => [
+                'userId' => (string) ($row['userId'] ?? ''),
+                'displayName' => (string) ($row['displayName'] ?? $row['userId'] ?? ''),
+                'rewardEventId' => (int) ($row['rewardEventId'] ?? 0),
+            ], $recipientResults), 0, 8),
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    public function revokeBatch(string $guildId, array $payload, array $adminUser, int $adminActionId): array
+    {
+        $this->ensureRules();
+
+        $batchId = trim((string) ($payload['batchId'] ?? ''));
+        $reason = trim((string) ($payload['reason'] ?? ''));
+        if ($guildId === '' || $batchId === '') {
+            throw new InvalidArgumentException('ต้องระบุ batch ที่จะยกเลิก');
+        }
+        if ($reason === '') {
+            throw new InvalidArgumentException('ต้องระบุเหตุผลในการยกเลิก Manual Earn');
+        }
+
+        if (isset($this->revokeMapByBatchIds($guildId, [$batchId])[$batchId])) {
+            throw new RuntimeException('รายการนี้ถูกยกเลิกไปแล้ว');
+        }
+
+        $grantRows = $this->findGrantRowsByBatch($guildId, $batchId);
+        if (!$grantRows) {
+            throw new RuntimeException('ไม่พบรายการแจกที่ต้องการยกเลิก');
+        }
+
+        TransactionTraceService::ensureSchema();
+        $traceId = TransactionTraceService::generateTraceId('earn_manual_revoke');
+        $ruleId = $this->ensureRule(self::RULE_CODE_REVOKE, 'Manual Earn Revoke', 'earn_manual_revoke');
+        $createDate = date('Y-m-d H:i:s');
+        $freeSpinService = new GachaFreeSpinService();
+        $walletRows = [];
+        $reversalCount = 0;
+        $recipientMap = [];
+        $pdo = Database::pdo();
+        $ownsTransaction = !$pdo->inTransaction();
+        if ($ownsTransaction) {
+            $pdo->beginTransaction();
+        }
+
+        try {
+            foreach ($grantRows as $row) {
+                $metadata = $this->decodeJson($row['metadataJson'] ?? '');
+                $reward = is_array($metadata['reward'] ?? null) ? $metadata['reward'] : [];
+                $unitRewards = $this->normalizeUnitRewards($reward['unitRewards'] ?? []);
+                $freeSpins = max(0, (int) ($reward['gachaFreeSpin'] ?? 0));
+                $userId = (string) ($row['userId'] ?? '');
+                $displayName = (string) ($metadata['recipient']['displayName'] ?? $userId);
+
+                $recipientMap[$userId] = $displayName;
+
+                $reversalMetadata = [
+                    'rule' => self::RULE_CODE_REVOKE,
+                    'reward' => [
+                        'unitRewards' => [],
+                        'gachaFreeSpin' => 0,
+                    ],
+                    'reason' => $reason !== '' ? $reason : (string) ($metadata['reason'] ?? ''),
+                    'manualAdminActionId' => $adminActionId,
+                    'grantedBy' => [
+                        'adminUserId' => (int) ($adminUser['adminUserId'] ?? 0),
+                        'discordUserId' => (string) ($adminUser['discordUserId'] ?? ''),
+                        'displayName' => (string) ($adminUser['displayName'] ?? ''),
+                    ],
+                    'manualGrant' => is_array($metadata['manualGrant'] ?? null) ? $metadata['manualGrant'] : [],
+                    'manualRevoke' => [
+                        'batchId' => $batchId,
+                        'originalRewardEventId' => (int) ($row['rewardEventId'] ?? 0),
+                        'reason' => $reason,
+                    ],
+                    'recipient' => [
+                        'userId' => $userId,
+                        'displayName' => $displayName,
+                    ],
+                    'reversal' => [
+                        'unitRewards' => $unitRewards,
+                        'gachaFreeSpin' => $freeSpins,
+                    ],
+                ];
+
+                $reversalEventId = Database::insert('tbl_reward_event', [
+                    'rewardRuleId' => $ruleId,
+                    'guildId' => $guildId,
+                    'userId' => $userId,
+                    'sourceType' => 'earn_manual_revoke',
+                    'sourceId' => $batchId . ':' . (string) ($row['rewardEventId'] ?? ''),
+                    'transactionGroupId' => $traceId,
+                    'rewardStatus' => 'reversed',
+                    'metadataJson' => json_encode($reversalMetadata, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+                    'createDate' => $createDate,
+                ]);
+                $reversalCount += 1;
+
+                foreach ($unitRewards as $unitCode => $amount) {
+                    $walletRows[] = ShopUnitService::adjustWalletBalance(
+                        $guildId,
+                        $userId,
+                        $unitCode,
+                        -1 * $amount,
+                        'debit',
+                        'earn_manual_revoke',
+                        (string) $reversalEventId,
+                        [
+                            'rule' => self::RULE_CODE_REVOKE,
+                            'rewardEventId' => $reversalEventId,
+                            'manualAdminActionId' => $adminActionId,
+                            'reason' => $reversalMetadata['reason'],
+                            'manualRevoke' => $reversalMetadata['manualRevoke'],
+                        ],
+                        [
+                            'transactionGroupId' => $traceId,
+                            'actorUserId' => (string) ($adminUser['discordUserId'] ?? ''),
+                            'targetUserId' => $userId,
+                            'createDate' => $createDate,
+                            'allowNegative' => true,
+                        ]
+                    );
+                }
+
+                if ($freeSpins > 0) {
+                    if ((string) ($row['rewardStatus'] ?? '') === 'granted') {
+                        $originalMetadata = $metadata;
+                        $originalMetadata['freeSpinStatus'] = 'revoked';
+                        $originalMetadata['manualRevokeBatchId'] = $batchId;
+                        $originalMetadata['revokedAt'] = $createDate;
+                        Database::execute(
+                            'UPDATE tbl_reward_event
+                                SET rewardStatus = "consumed",
+                                    metadataJson = :metadataJson
+                              WHERE rewardEventId = :rewardEventId
+                                AND rewardStatus = "granted"',
+                            [
+                                'rewardEventId' => (int) ($row['rewardEventId'] ?? 0),
+                                'metadataJson' => json_encode($originalMetadata, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+                            ]
+                        );
+                    } else {
+                        $freeSpinService->addDebt(
+                            $guildId,
+                            $userId,
+                            $freeSpins,
+                            'earn_manual_revoke',
+                            (string) $reversalEventId,
+                            [
+                                'manualAdminActionId' => $adminActionId,
+                                'batchId' => $batchId,
+                                'originalRewardEventId' => (int) ($row['rewardEventId'] ?? 0),
+                                'reason' => $reversalMetadata['reason'],
+                            ]
+                        );
+                    }
+                }
+            }
+
+            if ($ownsTransaction) {
+                $pdo->commit();
+            }
+        } catch (Throwable $exception) {
+            if ($ownsTransaction && $pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            throw $exception;
+        }
+
+        $summary = $this->batchSummaryFromRows($grantRows, [
+            $batchId => [
+                'revoked' => true,
+                'revokedAt' => $createDate,
+                'revokeReason' => $reason,
+                'revokedBy' => (string) ($adminUser['displayName'] ?? ''),
+                'reversalCount' => $reversalCount,
+            ],
+        ]);
+
+        LiveUpdateService::markTopic('earn_manual', [
+            'scope' => 'earn_manual_revoke',
+            'batchId' => $batchId,
+            'recipientCount' => (int) ($summary['recipientCount'] ?? 0),
+        ]);
+
+        return [
+            'batchId' => $batchId,
+            'reversalCount' => $reversalCount,
+            'affectedRecipients' => count($recipientMap),
+            'walletRowCount' => count($walletRows),
+            'summary' => $summary,
+        ];
+    }
+
+    /** @param array<string, int> $unitRewards */
+    public function grant(string $guildId, string $userId, array $unitRewards, string $reason, array $adminUser, int $adminActionId): array
+    {
+        $amounts = $this->normalizeUnitRewards($unitRewards);
+        if (!$amounts) {
+            throw new InvalidArgumentException('ต้องใส่จำนวนอย่างน้อย 1 หน่วย');
+        }
+
+        $unitCode = array_key_first($amounts);
+        return $this->grantSelection($guildId, [
+            'targetType' => 'user',
+            'targetUserId' => $userId,
+            'rewardType' => $unitCode,
+            'amount' => (int) ($amounts[$unitCode] ?? 0),
+            'reason' => $reason,
+        ], $adminUser, $adminActionId);
+    }
+
+    /** @return array<string, mixed> */
+    private function prepareSelection(string $guildId, array $payload): array
     {
         $guildId = trim($guildId);
         $targetType = $this->normalizeTargetType((string) ($payload['targetType'] ?? 'user'));
@@ -134,121 +399,316 @@ final class ManualEarnGrantService
         if ($amount <= 0) {
             throw new InvalidArgumentException('ต้องใส่จำนวนมากกว่า 0');
         }
-
-        $grantContext = $this->resolveGrantContext($guildId, $targetType, $targetUserId, $targetRoleId);
-        $batchId = $this->batchId();
-        $rewardTemplate = $this->rewardTemplate($rewardType);
-        $eventCount = 0;
-        $recipientResults = [];
-
-        foreach ($grantContext['recipients'] as $recipient) {
-            if ($rewardType === 'freeSpin') {
-                for ($index = 1; $index <= $amount; $index += 1) {
-                    $recipientResults[] = $this->grantToRecipient(
-                        $guildId,
-                        $recipient,
-                        $rewardTemplate,
-                        $reason,
-                        $adminUser,
-                        $adminActionId,
-                        [
-                            'batchId' => $batchId,
-                            'eventSourceId' => $batchId . ':' . (string) ($recipient['userId'] ?? '') . ':' . $index,
-                            'targetType' => $grantContext['targetType'],
-                            'targetId' => $grantContext['targetId'],
-                            'targetLabel' => $grantContext['targetLabel'],
-                            'recipientCount' => $grantContext['recipientCount'],
-                            'rewardType' => $rewardType,
-                            'amount' => $amount,
-                            'freeSpinIndex' => $index,
-                            'freeSpinTotal' => $amount,
-                        ]
-                    );
-                    $eventCount += 1;
-                }
-                continue;
-            }
-
-            $recipientResults[] = $this->grantToRecipient(
-                $guildId,
-                $recipient,
-                array_merge($rewardTemplate, ['unitRewards' => [$rewardType => $amount]]),
-                $reason,
-                $adminUser,
-                $adminActionId,
-                [
-                    'batchId' => $batchId,
-                    'targetType' => $grantContext['targetType'],
-                    'targetId' => $grantContext['targetId'],
-                    'targetLabel' => $grantContext['targetLabel'],
-                    'recipientCount' => $grantContext['recipientCount'],
-                    'rewardType' => $rewardType,
-                    'amount' => $amount,
-                ]
-            );
-            $eventCount += 1;
+        if ($reason === '') {
+            throw new InvalidArgumentException('ต้องระบุเหตุผลในการแจก Manual Earn');
         }
 
-        LiveUpdateService::markTopic('earn_manual', [
-            'scope' => 'earn_manual_batch',
-            'batchId' => $batchId,
-            'targetType' => $grantContext['targetType'],
-            'recipientCount' => $grantContext['recipientCount'],
-            'rewardType' => $rewardType,
-            'amount' => $amount,
-        ]);
+        $grantContext = $this->resolveGrantContext($guildId, $targetType, $targetUserId, $targetRoleId);
+        $unitRewardsEach = $rewardType === 'freeSpin' ? ['freeSpin' => $amount] : [$rewardType => $amount];
+        $unitRewardsTotal = [];
+        foreach ($unitRewardsEach as $unitCode => $unitAmount) {
+            $unitRewardsTotal[$unitCode] = max(0, (int) $unitAmount) * max(1, (int) ($grantContext['recipientCount'] ?? 1));
+        }
 
         return [
-            'batchId' => $batchId,
             'targetType' => $grantContext['targetType'],
             'targetId' => $grantContext['targetId'],
             'targetLabel' => $grantContext['targetLabel'],
             'recipientCount' => $grantContext['recipientCount'],
+            'recipients' => $grantContext['recipients'],
             'rewardType' => $rewardType,
             'amount' => $amount,
-            'unitRewards' => $rewardType === 'freeSpin' ? ['freeSpin' => $amount] : [$rewardType => $amount],
-            'eventCount' => $eventCount,
-            'sampleRecipients' => array_slice(array_map(static fn (array $row): array => [
-                'userId' => (string) ($row['userId'] ?? ''),
-                'displayName' => (string) ($row['displayName'] ?? $row['userId'] ?? ''),
-                'rewardEventId' => (int) ($row['rewardEventId'] ?? 0),
-            ], $recipientResults), 0, 8),
+            'reason' => $reason,
+            'unitRewardsEach' => $unitRewardsEach,
+            'unitRewardsTotal' => $unitRewardsTotal,
         ];
     }
 
-    /** @param array<string, int> $unitRewards */
-    public function grant(string $guildId, string $userId, array $unitRewards, string $reason, array $adminUser, int $adminActionId): array
+    /** @param array<string, mixed> $selection */
+    /** @return array<string, mixed> */
+    private function selectionPreview(array $selection): array
     {
-        $amounts = $this->normalizeUnitRewards($unitRewards);
-        if (!$amounts) {
-            throw new InvalidArgumentException('ต้องใส่จำนวนอย่างน้อย 1 หน่วย');
-        }
-        $unitCode = array_key_first($amounts);
-        return $this->grantSelection($guildId, [
-            'targetType' => 'user',
-            'targetUserId' => $userId,
-            'rewardType' => $unitCode,
-            'amount' => (int) ($amounts[$unitCode] ?? 0),
-            'reason' => $reason,
-        ], $adminUser, $adminActionId);
+        $recipients = array_map(static fn (array $row): array => [
+            'userId' => (string) ($row['userId'] ?? ''),
+            'displayName' => (string) ($row['displayName'] ?? $row['userId'] ?? ''),
+        ], $selection['recipients']);
+
+        return [
+            'targetType' => $selection['targetType'],
+            'targetId' => $selection['targetId'],
+            'targetLabel' => $selection['targetLabel'],
+            'recipientCount' => $selection['recipientCount'],
+            'rewardType' => $selection['rewardType'],
+            'amount' => $selection['amount'],
+            'reason' => $selection['reason'],
+            'unitRewards' => $selection['unitRewardsEach'],
+            'unitRewardsEach' => $selection['unitRewardsEach'],
+            'unitRewardsTotal' => $selection['unitRewardsTotal'],
+            'recipients' => $selection['targetType'] === 'server' ? [] : $recipients,
+            'sampleRecipients' => array_slice($recipients, 0, 12),
+            'listSuppressed' => $selection['targetType'] === 'server',
+        ];
     }
 
-    private function ensureRule(): int
+    /** @return array<int, array<string, mixed>> */
+    private function recentBatches(string $guildId, int $limit): array
+    {
+        $rows = $this->recentGrantRows($guildId, $limit * 4);
+        if (!$rows) {
+            return [];
+        }
+
+        $batchIds = [];
+        foreach ($rows as $row) {
+            $batchId = (string) ($row['batchId'] ?? '');
+            if ($batchId !== '') {
+                $batchIds[$batchId] = true;
+            }
+        }
+
+        $revokeMap = $this->revokeMapByBatchIds($guildId, array_keys($batchIds));
+        $groups = [];
+        foreach ($rows as $row) {
+            $batchId = (string) ($row['batchId'] ?? '');
+            if ($batchId === '') {
+                $batchId = 'event_' . (string) ($row['rewardEventId'] ?? '');
+            }
+            $groups[$batchId][] = $row;
+        }
+
+        $result = [];
+        foreach ($groups as $batchId => $groupRows) {
+            $result[] = $this->batchSummaryFromRows($groupRows, $revokeMap);
+        }
+
+        usort($result, static function (array $left, array $right): int {
+            $dateCompare = strcmp((string) ($right['createDate'] ?? ''), (string) ($left['createDate'] ?? ''));
+            if ($dateCompare !== 0) {
+                return $dateCompare;
+            }
+
+            return strcmp((string) ($right['batchId'] ?? ''), (string) ($left['batchId'] ?? ''));
+        });
+
+        return array_slice($result, 0, max(10, min(100, $limit)));
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    private function recentGrantRows(string $guildId, int $limit): array
+    {
+        $rows = Database::fetchAll(
+            'SELECT
+                re.*,
+                rr.ruleName,
+                u.userName,
+                u.globalName,
+                u.avatarHash,
+                COALESCE(m.nickName, u.globalName, u.userName, re.userId) AS displayName
+             FROM tbl_reward_event re
+             INNER JOIN tbl_reward_rule rr ON rr.rewardRuleId = re.rewardRuleId
+             LEFT JOIN tbl_user u ON u.userId = re.userId
+             LEFT JOIN tbl_member m ON m.guildId = re.guildId AND m.userId = re.userId
+             WHERE re.guildId = :guildId
+               AND rr.ruleCode = :ruleCode
+             ORDER BY re.rewardEventId DESC
+             LIMIT ' . max(20, min(400, $limit)),
+            ['guildId' => $guildId, 'ruleCode' => self::RULE_CODE_GRANT]
+        );
+
+        return array_map(fn (array $row): array => $this->decorateGrantRow($row), $rows);
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    private function findGrantRowsByBatch(string $guildId, string $batchId): array
+    {
+        $rows = Database::fetchAll(
+            'SELECT
+                re.*,
+                rr.ruleName,
+                u.userName,
+                u.globalName,
+                u.avatarHash,
+                COALESCE(m.nickName, u.globalName, u.userName, re.userId) AS displayName
+             FROM tbl_reward_event re
+             INNER JOIN tbl_reward_rule rr ON rr.rewardRuleId = re.rewardRuleId
+             LEFT JOIN tbl_user u ON u.userId = re.userId
+             LEFT JOIN tbl_member m ON m.guildId = re.guildId AND m.userId = re.userId
+             WHERE re.guildId = :guildId
+               AND rr.ruleCode = :ruleCode
+               AND JSON_UNQUOTE(JSON_EXTRACT(re.metadataJson, "$.manualGrant.batchId")) = :batchId
+             ORDER BY re.rewardEventId ASC',
+            [
+                'guildId' => $guildId,
+                'ruleCode' => self::RULE_CODE_GRANT,
+                'batchId' => $batchId,
+            ]
+        );
+
+        return array_map(fn (array $row): array => $this->decorateGrantRow($row), $rows);
+    }
+
+    /** @param array<int, string> $batchIds */
+    /** @return array<string, array<string, mixed>> */
+    private function revokeMapByBatchIds(string $guildId, array $batchIds): array
+    {
+        $batchIds = array_values(array_filter(array_map('strval', $batchIds), static fn (string $value): bool => trim($value) !== ''));
+        if (!$batchIds) {
+            return [];
+        }
+
+        $params = ['guildId' => $guildId, 'ruleCode' => self::RULE_CODE_REVOKE];
+        $placeholders = [];
+        foreach ($batchIds as $index => $batchId) {
+            $key = 'batch' . $index;
+            $placeholders[] = ':' . $key;
+            $params[$key] = $batchId;
+        }
+
+        $rows = Database::fetchAll(
+            'SELECT re.rewardEventId, re.createDate, re.metadataJson
+               FROM tbl_reward_event re
+         INNER JOIN tbl_reward_rule rr ON rr.rewardRuleId = re.rewardRuleId
+              WHERE re.guildId = :guildId
+                AND rr.ruleCode = :ruleCode
+                AND JSON_UNQUOTE(JSON_EXTRACT(re.metadataJson, "$.manualRevoke.batchId")) IN (' . implode(', ', $placeholders) . ')
+              ORDER BY re.rewardEventId DESC',
+            $params
+        );
+
+        $map = [];
+        foreach ($rows as $row) {
+            $metadata = $this->decodeJson($row['metadataJson'] ?? '');
+            $batchId = trim((string) ($metadata['manualRevoke']['batchId'] ?? ''));
+            if ($batchId === '') {
+                continue;
+            }
+            if (!isset($map[$batchId])) {
+                $map[$batchId] = [
+                    'revoked' => true,
+                    'revokedAt' => (string) ($row['createDate'] ?? ''),
+                    'revokeReason' => (string) ($metadata['reason'] ?? ''),
+                    'revokedBy' => (string) ($metadata['grantedBy']['displayName'] ?? $metadata['grantedBy']['discordUserId'] ?? ''),
+                    'reversalCount' => 0,
+                ];
+            }
+            $map[$batchId]['reversalCount'] = max(0, (int) ($map[$batchId]['reversalCount'] ?? 0)) + 1;
+        }
+
+        return $map;
+    }
+
+    /** @param array<int, array<string, mixed>> $rows */
+    /** @param array<string, array<string, mixed>> $revokeMap */
+    /** @return array<string, mixed> */
+    private function batchSummaryFromRows(array $rows, array $revokeMap): array
+    {
+        $first = $rows[0] ?? [];
+        $batchId = (string) ($first['batchId'] ?? '');
+        $recipientCount = max(1, (int) ($first['recipientCount'] ?? 1));
+        $rewardType = (string) ($first['manualGrant']['rewardType'] ?? '');
+        $amount = max(1, (int) ($first['manualGrant']['amount'] ?? 1));
+        $unitRewardsEach = is_array($first['unitRewards'] ?? null) ? $first['unitRewards'] : [];
+        if ($rewardType === 'freeSpin') {
+            $unitRewardsEach = ['freeSpin' => $amount];
+        } elseif ($rewardType !== '' && !isset($unitRewardsEach[$rewardType])) {
+            $unitRewardsEach = [$rewardType => $amount];
+        }
+        $unitRewardsTotal = [];
+        foreach ($unitRewardsEach as $unitCode => $amount) {
+            $unitRewardsTotal[(string) $unitCode] = max(0, (int) $amount) * $recipientCount;
+        }
+
+        $sampleRecipients = [];
+        foreach ($rows as $row) {
+            $displayName = (string) ($row['displayName'] ?? $row['userId'] ?? '');
+            if ($displayName === '' || in_array($displayName, $sampleRecipients, true)) {
+                continue;
+            }
+            $sampleRecipients[] = $displayName;
+            if (count($sampleRecipients) >= 8) {
+                break;
+            }
+        }
+
+        $revoke = $revokeMap[$batchId] ?? [
+            'revoked' => false,
+            'revokedAt' => '',
+            'revokeReason' => '',
+            'revokedBy' => '',
+            'reversalCount' => 0,
+        ];
+
+        return [
+            'batchId' => $batchId,
+            'createDate' => (string) ($first['createDate'] ?? ''),
+            'targetType' => (string) ($first['targetType'] ?? 'user'),
+            'targetLabel' => (string) ($first['targetLabel'] ?? ''),
+            'recipientCount' => $recipientCount,
+            'rewardType' => $rewardType,
+            'amount' => $amount,
+            'unitRewards' => $unitRewardsEach,
+            'unitRewardsEach' => $unitRewardsEach,
+            'unitRewardsTotal' => $unitRewardsTotal,
+            'reason' => (string) ($first['reason'] ?? ''),
+            'grantedBy' => (string) ($first['grantedBy'] ?? ''),
+            'sampleRecipients' => $sampleRecipients,
+            'eventCount' => count($rows),
+            'revoked' => (bool) ($revoke['revoked'] ?? false),
+            'revokedAt' => (string) ($revoke['revokedAt'] ?? ''),
+            'revokeReason' => (string) ($revoke['revokeReason'] ?? ''),
+            'revokedBy' => (string) ($revoke['revokedBy'] ?? ''),
+            'reversalCount' => max(0, (int) ($revoke['reversalCount'] ?? 0)),
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private function decorateGrantRow(array $row): array
+    {
+        $metadata = $this->decodeJson($row['metadataJson'] ?? '');
+        $manualGrant = is_array($metadata['manualGrant'] ?? null) ? $metadata['manualGrant'] : [];
+        $reward = is_array($metadata['reward'] ?? null) ? $metadata['reward'] : [];
+        $unitRewards = is_array($reward['unitRewards'] ?? null) ? $reward['unitRewards'] : [];
+        $freeSpins = max(0, (int) ($reward['gachaFreeSpin'] ?? 0));
+        if ($freeSpins > 0) {
+            $unitRewards['freeSpin'] = max(0, (int) ($unitRewards['freeSpin'] ?? 0)) + $freeSpins;
+        }
+
+        $row['metadata'] = $metadata;
+        $row['manualGrant'] = $manualGrant;
+        $row['unitRewards'] = $unitRewards;
+        $row['reason'] = (string) ($metadata['reason'] ?? '');
+        $row['grantedBy'] = (string) ($metadata['grantedBy']['displayName'] ?? $metadata['grantedBy']['discordUserId'] ?? '');
+        $row['targetType'] = (string) ($manualGrant['targetType'] ?? 'user');
+        $row['targetLabel'] = (string) ($manualGrant['targetLabel'] ?? '');
+        $row['recipientCount'] = max(1, (int) ($manualGrant['recipientCount'] ?? 1));
+        $row['batchId'] = (string) ($manualGrant['batchId'] ?? $row['sourceId'] ?? '');
+        $row['avatarUrl'] = DiscordAssets::avatar((string) ($row['userId'] ?? ''), $row['avatarHash'] ?? null, 64);
+
+        return $row;
+    }
+
+    private function ensureRules(): void
+    {
+        $this->ensureRule(self::RULE_CODE_GRANT, 'Manual Earn Grant', 'earn_manual');
+        $this->ensureRule(self::RULE_CODE_REVOKE, 'Manual Earn Revoke', 'earn_manual_revoke');
+    }
+
+    private function ensureRule(string $ruleCode, string $ruleName, string $triggerType): int
     {
         Database::execute(
             'INSERT INTO tbl_reward_rule (ruleCode, ruleName, triggerType, conditionJson, rewardJson, isActive, updateDate)
              VALUES (:ruleCode, :ruleName, :triggerType, :conditionJson, :rewardJson, 1, :updateDate)
              ON DUPLICATE KEY UPDATE updateDate = updateDate',
             [
-                'ruleCode' => self::RULE_CODE,
-                'ruleName' => 'Manual Earn Grant',
-                'triggerType' => 'earn_manual',
+                'ruleCode' => $ruleCode,
+                'ruleName' => $ruleName,
+                'triggerType' => $triggerType,
                 'conditionJson' => json_encode(['manual' => true], JSON_UNESCAPED_SLASHES),
                 'rewardJson' => json_encode(['unitRewards' => [], 'gachaFreeSpin' => 0], JSON_UNESCAPED_SLASHES),
                 'updateDate' => date('Y-m-d H:i:s'),
             ]
         );
-        $row = Database::fetch('SELECT rewardRuleId FROM tbl_reward_rule WHERE ruleCode = :ruleCode', ['ruleCode' => self::RULE_CODE]);
+        $row = Database::fetch('SELECT rewardRuleId FROM tbl_reward_rule WHERE ruleCode = :ruleCode', ['ruleCode' => $ruleCode]);
         return (int) ($row['rewardRuleId'] ?? 0);
     }
 
@@ -318,13 +778,7 @@ final class ManualEarnGrantService
     private function normalizeRewardType(string $value): string
     {
         $value = $this->normalizeCode($value);
-        if ($value === 'free_spin') {
-            return 'freeSpin';
-        }
-        if ($value === 'freespin') {
-            return 'freeSpin';
-        }
-        if ($value === 'freeSpin') {
+        if (in_array($value, ['free_spin', 'freespin', 'freeSpin'], true)) {
             return 'freeSpin';
         }
 
@@ -433,26 +887,6 @@ final class ManualEarnGrantService
         ];
     }
 
-    /** @return array<string, mixed> */
-    private function rewardTemplate(string $rewardType): array
-    {
-        if ($rewardType === 'freeSpin') {
-            return [
-                'unitRewards' => [],
-                'coin' => 0,
-                'gachaTicket' => 0,
-                'gachaFreeSpin' => 1,
-            ];
-        }
-
-        return [
-            'unitRewards' => [],
-            'coin' => $rewardType === 'coin' ? 1 : 0,
-            'gachaTicket' => $rewardType === 'ticket' ? 1 : 0,
-            'gachaFreeSpin' => 0,
-        ];
-    }
-
     /** @param array<string, mixed> $recipient */
     /** @param array<string, mixed> $reward */
     /** @param array<string, mixed> $grantContext */
@@ -471,7 +905,7 @@ final class ManualEarnGrantService
         }
 
         TransactionTraceService::ensureSchema();
-        $ruleId = $this->ensureRule();
+        $ruleId = $this->ensureRule(self::RULE_CODE_GRANT, 'Manual Earn Grant', 'earn_manual');
         $unitRewards = $this->normalizeUnitRewards($reward['unitRewards'] ?? []);
         $traceId = TransactionTraceService::generateTraceId('earn_manual');
         $createDate = date('Y-m-d H:i:s');
@@ -483,7 +917,7 @@ final class ManualEarnGrantService
         ];
 
         $metadata = [
-            'rule' => self::RULE_CODE,
+            'rule' => self::RULE_CODE_GRANT,
             'reward' => $rewardPayload,
             'reason' => trim($reason),
             'manualAdminActionId' => $adminActionId,
@@ -532,7 +966,7 @@ final class ManualEarnGrantService
                 'earn_manual',
                 (string) $rewardEventId,
                 [
-                    'rule' => self::RULE_CODE,
+                    'rule' => self::RULE_CODE_GRANT,
                     'rewardEventId' => $rewardEventId,
                     'manualAdminActionId' => $adminActionId,
                     'reason' => trim($reason),
@@ -608,6 +1042,13 @@ final class ManualEarnGrantService
             }
         }
         return $out;
+    }
+
+    /** @return array<string, mixed> */
+    private function decodeJson(mixed $json): array
+    {
+        $decoded = json_decode((string) $json, true);
+        return is_array($decoded) ? $decoded : [];
     }
 
     private function normalizeCode(string $value): string

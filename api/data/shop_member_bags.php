@@ -21,29 +21,34 @@ $filters = [
     'dir' => strtolower(trim((string) Input::str('dir', 'asc'))) === 'desc' ? 'desc' : 'asc',
 ];
 
-$report = ShopReportService::memberBagReport((string) Bootstrap::config('discord.guildId', ''), $filters);
-$units = ShopUnitService::units(true);
-$itemTypes = Database::fetchAll(
-    'SELECT DISTINCT itemType
-       FROM tbl_shop_item
-      WHERE itemType IS NOT NULL AND itemType <> ""
-      ORDER BY itemType ASC'
-);
+try {
+    ShopUnitService::ensureSchema();
+    $report = ShopReportService::memberBagReport((string) Bootstrap::config('discord.guildId', ''), $filters);
+    $units = ShopUnitService::units(true);
+    $itemTypes = Database::fetchAll(
+        'SELECT DISTINCT itemType
+           FROM tbl_shop_item
+          WHERE itemType IS NOT NULL AND itemType <> ""
+          ORDER BY itemType ASC'
+    );
 
-Response::json([
-    'ok' => true,
-    'page' => $report['page'],
-    'pageSize' => $report['pageSize'],
-    'total' => $report['total'],
-    'metrics' => $report['metrics'],
-    'rows' => $report['rows'],
-    'walletColumns' => $report['walletColumns'] ?? [],
-    'filters' => $filters,
-    'filterOptions' => [
-        'units' => array_map(static fn (array $unit): array => [
-            'unitCode' => (string) ($unit['unitCode'] ?? ''),
-            'label' => (string) ($unit['shortName'] ?? $unit['displayName'] ?? $unit['unitCode'] ?? ''),
-        ], $units),
-        'itemTypes' => array_values(array_map(static fn (array $row): string => (string) ($row['itemType'] ?? ''), $itemTypes)),
-    ],
-]);
+    Response::json([
+        'ok' => true,
+        'page' => $report['page'],
+        'pageSize' => $report['pageSize'],
+        'total' => $report['total'],
+        'metrics' => $report['metrics'],
+        'rows' => $report['rows'],
+        'walletColumns' => $report['walletColumns'] ?? [],
+        'filters' => $filters,
+        'filterOptions' => [
+            'units' => array_map(static fn (array $unit): array => [
+                'unitCode' => (string) ($unit['unitCode'] ?? ''),
+                'label' => (string) ($unit['shortName'] ?? $unit['displayName'] ?? $unit['unitCode'] ?? ''),
+            ], $units),
+            'itemTypes' => array_values(array_map(static fn (array $row): string => (string) ($row['itemType'] ?? ''), $itemTypes)),
+        ],
+    ]);
+} catch (Throwable $exception) {
+    Response::error('โหลดกระเป๋าสมาชิกไม่สำเร็จ: ' . $exception->getMessage(), 500);
+}

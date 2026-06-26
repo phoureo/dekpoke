@@ -17,7 +17,8 @@ $t = [
         'all' => 'ทั้งหมด',
         'income' => 'ได้รับ',
         'spend' => 'ใช้ไป',
-        'movement' => 'เคลื่อนไหว',
+        'movement' => 'สถานะ/อื่น ๆ',
+        'history_filter_hint' => 'ได้รับ = ของหรือยอดเข้า · ใช้ไป = รายการหักออก · สถานะ/อื่น ๆ = สถานะยศหรือรายการที่ไม่เพิ่ม/หักยอด',
         'empty_items' => 'ยังไม่มีไอเทมในกระเป๋า',
         'empty_roles' => 'ยังไม่มียศที่กำลังถืออยู่',
         'empty_history' => 'ยังไม่มีความเคลื่อนไหว',
@@ -44,6 +45,7 @@ $t = [
         'role_ends_at' => 'หมดอายุ',
         'role_state_permanent' => 'ใช้งานถาวร',
         'role_state_active' => 'กำลังใช้งาน',
+        'role_state_pending' => 'รอระบบแจกยศ',
         'role_state_queued' => 'รอต่อเวลา',
         'role_state_covered_by_permanent' => 'มีถาวรแล้ว',
         'role_state_expired_covered' => 'ถูกใช้ต่อแล้ว',
@@ -81,6 +83,38 @@ $t = [
         'select_member' => 'เลือก',
         'source_shop_role_badge_purchase' => 'ซื้อแบดยศจากร้าน',
         'source_shop_role_badge_gift' => 'ซื้อแบดยศส่งให้เพื่อน',
+        'use_item' => 'ใช้',
+        'open_item' => 'เปิด',
+        'item_used' => 'ใช้ไอเทมสำเร็จ',
+        'item_opened' => 'เปิดไอเทมสำเร็จ',
+        'stored_balls' => 'ลูกกาชาปิด',
+        'stored_balls_hint' => 'รอบที่ออกจากหน้าก่อนรับรางวัล เก็บผลเดิมไว้ เปิดแล้วได้รางวัลเดิม',
+        'stored_ball_name' => 'ลูกกาชาปิด',
+        'open_stored_ball' => 'เปิดลูก',
+        'stored_ball_opened' => 'เปิดลูกกาชาแล้ว',
+        'hold_to_open' => 'กดค้างเพื่อดูเมนู',
+        'stored_ball_menu_title' => 'ลูกกาชาปิด',
+        'stored_ball_menu_open' => 'เปิด',
+        'stored_ball_menu_details' => 'ดูรายละเอียด',
+        'stored_ball_details_title' => 'รายละเอียดลูกกาชา',
+        'stored_ball_details_hint' => 'รางวัลยังถูกปิดไว้จนกว่าจะกดเปิด',
+        'stored_ball_detail_stored_at' => 'ส่งเข้ากระเป๋า',
+        'stored_ball_detail_spin_at' => 'เริ่มหมุนเมื่อ',
+        'stored_ball_detail_tier' => 'ลูกกาชา',
+        'stored_ball_detail_spin_by' => 'หมุนโดย',
+        'stored_ball_detail_count' => 'จำนวนรอบ',
+        'stored_ball_detail_draw_id' => 'เลขรอบ',
+        'stored_ball_detail_free_spin' => 'Free spin',
+        'stored_ball_detail_unknown' => 'ไม่ทราบ',
+        'stored_ball_detail_button' => 'ปุ่ม {buttonId}',
+        'stored_ball_reward_title' => 'รางวัลจากลูกกาชา',
+        'stored_ball_reward_close' => 'รับรางวัล',
+        'stored_ball_reward_item_note' => 'ของรางวัลถูกส่งเข้ากระเป๋าแล้ว',
+        'stored_ball_reward_item_qty_note' => 'ของรางวัลถูกส่งเข้ากระเป๋าแล้ว x{count}',
+        'stored_ball_reward_role_note' => 'ระบบรับรางวัลแล้ว ดูสถานะยศต่อได้ในแท็บยศ',
+        'stored_ball_reward_currency_note' => 'รางวัลถูกเติมเข้าบัญชีแล้ว',
+        'stored_ball_reward_currency_qty_note' => 'รับ {count} {unit} เข้าบัญชีแล้ว',
+        'stored_ball_reward_fallback_name' => 'รางวัลกาชา',
     ],
     'en' => [
         'bag' => 'Bag',
@@ -90,7 +124,8 @@ $t = [
         'all' => 'All',
         'income' => 'Received',
         'spend' => 'Spent',
-        'movement' => 'Movement',
+        'movement' => 'Status/Other',
+        'history_filter_hint' => 'Received = items or balance added · Spent = deductions · Status/Other = role states or entries that do not change balances',
         'empty_items' => 'No items in your bag yet.',
         'empty_roles' => 'No active roles yet.',
         'empty_history' => 'No movement history yet.',
@@ -117,6 +152,7 @@ $t = [
         'role_ends_at' => 'Ends',
         'role_state_permanent' => 'Permanent access',
         'role_state_active' => 'Active now',
+        'role_state_pending' => 'Pending grant',
         'role_state_queued' => 'Queued next',
         'role_state_covered_by_permanent' => 'Covered by permanent access',
         'role_state_expired_covered' => 'Consumed by a later extension',
@@ -154,6 +190,38 @@ $t = [
         'select_member' => 'Select',
         'source_shop_role_badge_purchase' => 'Shop role badge purchase',
         'source_shop_role_badge_gift' => 'Gifted shop role badge purchase',
+        'use_item' => 'Use',
+        'open_item' => 'Open',
+        'item_used' => 'Item used successfully.',
+        'item_opened' => 'Item opened successfully.',
+        'stored_balls' => 'Closed gacha balls',
+        'stored_balls_hint' => 'Rounds left before claiming are saved here with their original result.',
+        'stored_ball_name' => 'Closed ball',
+        'open_stored_ball' => 'Open',
+        'stored_ball_opened' => 'Closed ball opened.',
+        'hold_to_open' => 'Hold for menu',
+        'stored_ball_menu_title' => 'Closed gacha ball',
+        'stored_ball_menu_open' => 'Open',
+        'stored_ball_menu_details' => 'Details',
+        'stored_ball_details_title' => 'Ball details',
+        'stored_ball_details_hint' => 'The reward stays hidden until you open the ball.',
+        'stored_ball_detail_stored_at' => 'Sent to bag',
+        'stored_ball_detail_spin_at' => 'Spin started',
+        'stored_ball_detail_tier' => 'Gacha ball',
+        'stored_ball_detail_spin_by' => 'Spent',
+        'stored_ball_detail_count' => 'Rounds',
+        'stored_ball_detail_draw_id' => 'Draw ID',
+        'stored_ball_detail_free_spin' => 'Free spin',
+        'stored_ball_detail_unknown' => 'Unknown',
+        'stored_ball_detail_button' => 'Button {buttonId}',
+        'stored_ball_reward_title' => 'Reward from stored ball',
+        'stored_ball_reward_close' => 'Claim reward',
+        'stored_ball_reward_item_note' => 'The reward was added to your bag.',
+        'stored_ball_reward_item_qty_note' => 'The reward was added to your bag x{count}.',
+        'stored_ball_reward_role_note' => 'The reward was accepted. You can track the role in the Roles tab.',
+        'stored_ball_reward_currency_note' => 'The reward was added to your balance.',
+        'stored_ball_reward_currency_qty_note' => '{count} {unit} was added to your balance.',
+        'stored_ball_reward_fallback_name' => 'Gacha reward',
     ],
 ][$lang];
 
@@ -162,7 +230,8 @@ $baseUrl = rtrim((string) Bootstrap::config('app.baseUrl', '/discord'), '/');
 $player = PlayerAuth::currentUser();
 $userId = is_array($player) ? (string) ($player['userId'] ?? '') : '';
 $initialSection = strtolower((string) ($_GET['section'] ?? ''));
-$initialTab = strtolower((string) ($_GET['tab'] ?? '')) === 'roles' ? 'roles' : 'items';
+$requestedTab = strtolower((string) ($_GET['tab'] ?? ''));
+$initialTab = in_array($requestedTab, ['roles', 'history'], true) ? $requestedTab : 'items';
 if (in_array($initialSection, ['role-badges', 'role-badge-items'], true)) {
     $initialTab = 'items';
 }
@@ -173,6 +242,7 @@ if ($userId === '' && isset($_GET['player_token'])) {
     }
 }
 $items = [];
+$storedBalls = [];
 $bagMaxSlots = 70;
 $bagMinVisibleSlots = 42;
 $gridSlots = array_fill(0, $bagMaxSlots, null);
@@ -217,6 +287,27 @@ function bagAssetUrl(string $path): string
         return $path;
     }
     return $baseUrl . '/gacha/' . ltrim($path, '/');
+}
+
+function bagStoredBallTierId(?string $tierId): string
+{
+    $normalized = strtolower(trim((string) $tierId));
+    return in_array($normalized, ['common', 'rare', 'epic', 'legendary', 'mythic'], true)
+        ? $normalized
+        : 'common';
+}
+
+function bagStoredBallImage(string $tierId): string
+{
+    $normalized = bagStoredBallTierId($tierId);
+    $path = match ($normalized) {
+        'rare' => 'images/ball_2.png',
+        'epic' => 'images/ball_3.png',
+        'legendary' => 'images/ball_4.png',
+        'mythic' => 'images/ball_5.png',
+        default => 'images/ball_1.png',
+    };
+    return bagAssetUrl($path);
 }
 
 function bagDecodeJson(?string $json): array
@@ -355,6 +446,7 @@ function bagGrantStatusLabel(string $status, array $t): string
 {
     return match ($status) {
         'granted' => $t['role_state_active'],
+        'pending' => $t['role_state_pending'],
         'covered_by_permanent' => $t['role_state_covered_by_permanent'],
         'grant_failed' => $t['role_state_grant_failed'],
         'revoked', 'revoke_failed' => $t['role_state_ended'],
@@ -390,7 +482,7 @@ function bagUpdateInventorySlot(string $guildId, string $userId, int $inventoryI
     );
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     $input = bagReadInput();
     if (($input['action'] ?? '') === 'move_item') {
         if ($userId === '') {
@@ -444,6 +536,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             bagJsonResponse(['ok' => false, 'message' => $message], 400);
         }
     }
+    if (($input['action'] ?? '') === 'open_stored_ball') {
+        if ($userId === '') {
+            bagJsonResponse(['ok' => false, 'message' => 'player required'], 401);
+        }
+        try {
+            $result = class_exists('GachaRewardSettlementService')
+                ? (new GachaRewardSettlementService())->openStoredBall(
+                    $guildId,
+                    $userId,
+                    max(0, (int) ($input['storedBallId'] ?? 0))
+                )
+                : ['ok' => false];
+            bagJsonResponse(['ok' => true, 'result' => $result]);
+        } catch (Throwable $exception) {
+            $message = match ($exception->getMessage()) {
+                'STORED_BALL_NOT_FOUND' => 'ไม่พบลูกกาชานี้ในกระเป๋า',
+                'STORED_BALL_DRAW_INVALID' => 'ข้อมูลลูกกาชาไม่สมบูรณ์',
+                default => 'เปิดลูกกาชาไม่สำเร็จ ลองใหม่อีกครั้ง',
+            };
+            bagJsonResponse(['ok' => false, 'message' => $message], 400);
+        }
+    }
+    if (($input['action'] ?? '') === 'use_item') {
+        if ($userId === '') {
+            bagJsonResponse(['ok' => false, 'message' => 'player required'], 401);
+        }
+        try {
+            $result = class_exists('InventoryItemUseService')
+                ? (new InventoryItemUseService())->useInventoryItem(
+                    $guildId,
+                    $userId,
+                    max(0, (int) ($input['inventoryId'] ?? 0)),
+                    [
+                        'sourceType' => 'bag_use',
+                        'sourceId' => 'bag:' . $userId,
+                        'metadata' => [
+                            'surface' => 'gacha_bag',
+                        ],
+                    ]
+                )
+                : ['ok' => false];
+            bagJsonResponse(['ok' => true, 'result' => $result]);
+        } catch (Throwable $exception) {
+            $message = match ($exception->getMessage()) {
+                'ITEM_NOT_USABLE' => 'ไอเทมนี้ยังใช้จากกระเป๋าไม่ได้',
+                'ITEM_NOT_FOUND' => 'ไม่พบไอเทมนี้ในกระเป๋า',
+                'ITEM_OUT_OF_STOCK' => 'ไอเทมนี้ถูกใช้หมดแล้ว',
+                'ITEM_HANDLER_UNAVAILABLE' => 'ไอเทมนี้ยังไม่มี handler รองรับ',
+                default => 'ใช้ไอเทมไม่สำเร็จ ลองใหม่อีกครั้ง',
+            };
+            bagJsonResponse(['ok' => false, 'message' => $message], 400);
+        }
+    }
 }
 
 if ($userId !== '') {
@@ -493,6 +638,7 @@ if ($userId !== '') {
                 'type' => $itemType,
                 'image' => bagAssetUrl((string) ($row['image'] ?? '')),
                 'effectType' => (string) ($row['effectType'] ?? ''),
+                'isUsable' => in_array((string) ($row['effectType'] ?? ''), ['loot_box', 'currency_bundle'], true),
                 'quantity' => (int) ($row['quantity'] ?? 0),
                 'slot' => $slot !== null && $slot >= 0 && $slot < $bagMaxSlots ? $slot : null,
                 'meta' => $itemMeta,
@@ -501,6 +647,60 @@ if ($userId !== '') {
         }
     } catch (Throwable) {
         $items = [];
+    }
+
+    try {
+        $storedBalls = class_exists('GachaRewardSettlementService')
+            ? (new GachaRewardSettlementService())->storedBalls($guildId, $userId, 50)
+            : [];
+    } catch (Throwable) {
+        $storedBalls = [];
+    }
+
+    foreach ($storedBalls as $ball) {
+        $storedBallId = (int) ($ball['storedBallId'] ?? 0);
+        if ($storedBallId <= 0) {
+            continue;
+        }
+        $tierId = bagStoredBallTierId((string) ($ball['tierId'] ?? ''));
+        $tierName = trim((string) ($ball['tierName'] ?? ''));
+        $count = max(1, (int) ($ball['count'] ?? 1));
+        $storedBallDetails = [
+            'storedBallId' => $storedBallId,
+            'drawId' => (string) ($ball['drawId'] ?? ''),
+            'tierId' => $tierId,
+            'tierName' => $tierName,
+            'count' => $count,
+            'buttonId' => max(0, (int) ($ball['buttonId'] ?? 0)),
+            'currency' => (string) ($ball['currency'] ?? ''),
+            'cost' => max(0, (int) ($ball['cost'] ?? 0)),
+            'costPerSpin' => max(0, (int) ($ball['costPerSpin'] ?? 0)),
+            'usedFreeSpin' => !empty($ball['usedFreeSpin']),
+            'freeSpinSource' => (string) ($ball['freeSpinSource'] ?? ''),
+            'spinCommittedAt' => (int) ($ball['spinCommittedAt'] ?? 0),
+            'storedAt' => (string) ($ball['storedAt'] ?? $ball['createdAt'] ?? ''),
+            'storedReason' => (string) ($ball['storedReason'] ?? ''),
+        ];
+        $items[] = [
+            'inventoryId' => 0,
+            'storedBallId' => $storedBallId,
+            'name' => $tierName !== '' ? $tierName : $t['stored_ball_name'],
+            'code' => 'gacha_stored_ball_' . $storedBallId,
+            'type' => 'stored_ball',
+            'image' => bagStoredBallImage($tierId),
+            'effectType' => 'stored_ball',
+            'isUsable' => false,
+            'quantity' => $count,
+            'slot' => null,
+            'meta' => [
+                'tierId' => $tierId,
+                'tierName' => $tierName,
+                'holdLabel' => $t['hold_to_open'],
+                'cardTitle' => trim($t['stored_ball_name'] . ($tierName !== '' ? ' · ' . $tierName : '')),
+                'details' => $storedBallDetails,
+            ],
+            'roleBadge' => null,
+        ];
     }
 
     $nextFreeSlot = 0;
@@ -685,7 +885,7 @@ if ($userId !== '') {
             && $expireTs !== false
             && $expireTs <= time();
         $isMovement = $isExpiredActiveGrant
-            || in_array($status, ['revoked', 'revoke_failed', 'covered_by_permanent', 'expired_covered', 'grant_failed'], true);
+            || in_array($status, ['pending', 'revoked', 'revoke_failed', 'covered_by_permanent', 'expired_covered', 'grant_failed'], true);
         $history[] = [
             'kind' => $isMovement ? 'move' : 'in',
             'title' => trim($roleName . ' ' . $durationText),
@@ -794,6 +994,12 @@ $roleBadgeBaseIcon = bagAssetUrl('images/icon_roles_blank.png');
       border-color: transparent;
       background: linear-gradient(135deg, var(--bag-pink), var(--bag-cyan));
     }
+    .history-open.is-active {
+      color: #fff;
+      border-color: transparent;
+      background: linear-gradient(135deg, var(--bag-pink), var(--bag-cyan));
+      box-shadow: 0 10px 18px rgba(93, 135, 187, .18);
+    }
     .bag-content {
       min-height: 0;
       overflow: hidden;
@@ -810,6 +1016,14 @@ $roleBadgeBaseIcon = bagAssetUrl('images/icon_roles_blank.png');
       padding: 4px 4px 8px;
     }
     .bag-panel.is-active { display: block; }
+    .bag-panel.is-history-panel {
+      overflow: hidden;
+    }
+    .bag-panel.is-history-panel.is-active {
+      display: grid;
+      grid-template-rows: auto auto minmax(0, 1fr);
+      gap: 10px;
+    }
     .bag-grid {
       display: grid;
       grid-template-columns: repeat(7, minmax(0, 1fr));
@@ -943,6 +1157,100 @@ $roleBadgeBaseIcon = bagAssetUrl('images/icon_roles_blank.png');
       background: linear-gradient(180deg, rgba(255,250,235,.96), rgba(255,240,198,.94));
       color: #6a447f;
       font-weight: 900;
+    }
+    .bag-item-use {
+      position: absolute;
+      left: 6px;
+      right: 6px;
+      bottom: 22px;
+      border: 0;
+      border-radius: 999px;
+      padding: 4px 6px;
+      background: linear-gradient(180deg, rgba(123, 91, 214, .96), rgba(86, 65, 173, .96));
+      color: #fff;
+      font-size: 9px;
+      font-weight: 900;
+      letter-spacing: .04em;
+      box-shadow: 0 5px 10px rgba(73, 48, 95, .18);
+    }
+    .bag-item-card.is-stored-ball {
+      isolation: isolate;
+      overflow: hidden;
+      cursor: pointer;
+      touch-action: manipulation;
+      background:
+        radial-gradient(circle at 50% 4%, rgba(255,255,255,.96), rgba(255,255,255,.58) 24%, transparent 46%),
+        linear-gradient(180deg, rgba(255,255,255,.94), rgba(242,236,255,.9));
+      box-shadow: 0 10px 18px rgba(73, 48, 95, .16);
+      transition: transform .16s ease, box-shadow .16s ease, opacity .16s ease;
+    }
+    .bag-item-card.is-stored-ball:active {
+      cursor: pointer;
+    }
+    .bag-item-card.is-stored-ball::before {
+      content: "";
+      position: absolute;
+      inset: 8px;
+      border-radius: 999px;
+      background: radial-gradient(circle, var(--stored-ball-glow, rgba(114,196,255,.2)), transparent 72%);
+      opacity: .72;
+      z-index: 0;
+      pointer-events: none;
+    }
+    .bag-item-card.is-stored-ball img {
+      position: relative;
+      z-index: 1;
+      width: 84%;
+      height: 84%;
+      filter: drop-shadow(0 10px 12px rgba(55,45,76,.16));
+    }
+    .bag-item-card.is-stored-ball .bag-item-qty {
+      background: rgba(61, 39, 82, .92);
+      z-index: 2;
+    }
+    .bag-item-card.is-stored-ball .bag-item-name {
+      left: 5px;
+      right: 5px;
+      bottom: 5px;
+      padding: 4px 6px;
+      background: rgba(255,255,255,.9);
+      color: #4b3161;
+      font-weight: 900;
+      z-index: 2;
+    }
+    .bag-item-card.is-stored-ball.is-tier-common { --stored-ball-glow: rgba(114,196,255,.32); }
+    .bag-item-card.is-stored-ball.is-tier-rare { --stored-ball-glow: rgba(255,95,159,.34); }
+    .bag-item-card.is-stored-ball.is-tier-epic { --stored-ball-glow: rgba(186,124,255,.36); }
+    .bag-item-card.is-stored-ball.is-tier-legendary { --stored-ball-glow: rgba(255,212,44,.38); }
+    .bag-item-card.is-stored-ball.is-tier-mythic { --stored-ball-glow: rgba(255,240,168,.44); }
+    .bag-item-card.is-stored-ball.is-holding {
+      transform: scale(.97);
+      box-shadow: 0 12px 22px rgba(73, 48, 95, .2);
+    }
+    .bag-item-card.is-stored-ball[data-opening="1"] {
+      opacity: .72;
+      pointer-events: none;
+    }
+    .bag-stored-ball-hold {
+      position: absolute;
+      left: 6px;
+      right: 6px;
+      bottom: 22px;
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      padding: 4px 6px;
+      background: linear-gradient(180deg, rgba(123, 91, 214, .98), rgba(86, 65, 173, .98));
+      color: #fff;
+      font-size: 9px;
+      font-weight: 900;
+      letter-spacing: .04em;
+      box-shadow: 0 5px 10px rgba(73, 48, 95, .18);
+      pointer-events: none;
+      z-index: 2;
+    }
+    .bag-item-card.is-stored-ball.is-holding .bag-stored-ball-hold {
+      background: linear-gradient(180deg, rgba(255, 127, 184, .98), rgba(128, 176, 255, .98));
     }
     .role-groups {
       display: grid;
@@ -1384,47 +1692,228 @@ $roleBadgeBaseIcon = bagAssetUrl('images/icon_roles_blank.png');
     .bag-toast.is-visible {
       display: inline-flex;
     }
-    .history-drawer {
+    body.is-stored-ball-reward-open,
+    body.is-stored-ball-menu-open {
+      overflow: hidden;
+    }
+    .stored-ball-menu-modal,
+    .stored-ball-reward-modal {
       position: fixed;
       inset: 0;
-      z-index: 20;
-      display: none;
-      padding: 14px;
-      background: rgba(22, 15, 37, .28);
-      backdrop-filter: blur(8px);
-    }
-    .history-drawer.is-open { display: grid; }
-    .history-card {
-      min-height: 0;
-      overflow: hidden;
-      display: grid;
-      grid-template-rows: auto auto minmax(0, 1fr);
-      gap: 10px;
-      align-self: stretch;
-      border-radius: 22px;
-      padding: 14px;
-      background: rgba(255,255,255,.96);
-      box-shadow: 0 24px 60px rgba(20, 12, 34, .22);
-    }
-    .history-head {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
+      z-index: 36;
+      display: flex;
       align-items: center;
-      gap: 10px;
+      justify-content: center;
+      padding: 20px 16px;
+      background: rgba(24, 12, 38, .56);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .2s ease;
     }
-    .history-head h2 {
-      margin: 0;
-      color: #3d2752;
-      font-size: 23px;
+    .stored-ball-menu-modal {
+      z-index: 35;
+      align-items: end;
+      padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
     }
-    .history-close {
+    .stored-ball-menu-modal.is-open,
+    .stored-ball-reward-modal.is-open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .stored-ball-menu-card,
+    .stored-ball-reward-card {
+      position: relative;
+      width: min(92vw, 368px);
+      padding: 26px 22px 22px;
+      border-radius: 26px;
+      border: 1px solid rgba(255,255,255,.48);
+      background:
+        radial-gradient(circle at top, rgba(255,255,255,.72), rgba(255,255,255,0) 44%),
+        linear-gradient(180deg, rgba(255,248,255,.98), rgba(247,238,255,.96));
+      box-shadow: 0 28px 52px rgba(32, 12, 52, .28);
+      text-align: center;
+    }
+    .stored-ball-menu-card {
+      width: min(92vw, 390px);
+      padding: 22px;
+      text-align: left;
+    }
+    .stored-ball-menu-close,
+    .stored-ball-reward-close {
+      position: absolute;
+      top: 12px;
+      right: 12px;
       width: 34px;
       height: 34px;
       border: 0;
-      border-radius: 999px;
-      background: #f1eef7;
-      color: #4b3161;
+      border-radius: 50%;
+      background: rgba(88, 58, 118, .12);
+      color: #5d3f79;
       font-size: 22px;
+      line-height: 1;
+      cursor: pointer;
+    }
+    .stored-ball-menu-kicker {
+      margin: 0 0 6px;
+      color: #a44f96;
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    .stored-ball-menu-title {
+      margin: 0;
+      padding-right: 34px;
+      color: #342045;
+      font-size: 23px;
+      line-height: 1.18;
+      font-weight: 900;
+    }
+    .stored-ball-menu-subtitle {
+      margin: 8px 0 0;
+      color: #6f5a83;
+      font-size: 13px;
+      line-height: 1.45;
+      font-weight: 750;
+    }
+    .stored-ball-detail-list {
+      margin-top: 14px;
+      display: grid;
+      gap: 8px;
+    }
+    .stored-ball-detail-row {
+      display: grid;
+      grid-template-columns: minmax(88px, .72fr) 1fr;
+      gap: 10px;
+      align-items: start;
+      padding: 10px 12px;
+      border-radius: 14px;
+      background: rgba(110, 76, 150, .08);
+      color: #4f3a64;
+      font-size: 12px;
+      line-height: 1.35;
+      font-weight: 800;
+    }
+    .stored-ball-detail-row strong {
+      color: #8a4d96;
+      font-weight: 900;
+    }
+    .stored-ball-detail-row span {
+      min-width: 0;
+      overflow-wrap: anywhere;
+      text-align: right;
+    }
+    .stored-ball-menu-actions {
+      margin-top: 16px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .stored-ball-menu-action {
+      min-height: 46px;
+      border: 0;
+      border-radius: 16px;
+      background: rgba(132, 90, 191, .12);
+      color: #563573;
+      font: inherit;
+      font-size: 14px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+    .stored-ball-menu-action.is-primary {
+      background: linear-gradient(135deg, var(--bag-purple), var(--bag-pink));
+      color: #fff;
+      box-shadow: 0 18px 28px rgba(143, 72, 163, .2);
+    }
+    .stored-ball-menu-action:disabled {
+      opacity: .58;
+      cursor: wait;
+    }
+    .stored-ball-reward-visual {
+      width: 122px;
+      height: 122px;
+      margin: 2px auto 16px;
+      border-radius: 32px;
+      display: grid;
+      place-items: center;
+      background:
+        radial-gradient(circle at top, rgba(255,255,255,.92), rgba(255,255,255,.35) 36%, rgba(188,149,255,.16) 70%),
+        linear-gradient(180deg, rgba(132,86,198,.18), rgba(255,129,203,.14));
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.8),
+        0 18px 34px rgba(58, 28, 90, .16);
+      overflow: hidden;
+    }
+    .stored-ball-reward-visual img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+    }
+    .stored-ball-reward-fallback {
+      width: 82px;
+      height: 82px;
+      border-radius: 24px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, rgba(117,225,255,.92), rgba(188,126,255,.94));
+      color: #fff;
+      font-size: 34px;
+      font-weight: 900;
+      text-transform: uppercase;
+      box-shadow: 0 14px 28px rgba(69, 48, 109, .18);
+    }
+    .stored-ball-reward-kicker {
+      margin: 0 0 6px;
+      color: #a44f96;
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+    .stored-ball-reward-title {
+      margin: 0;
+      color: #342045;
+      font-size: 25px;
+      line-height: 1.18;
+      font-weight: 900;
+      word-break: break-word;
+    }
+    .stored-ball-reward-badges {
+      margin-top: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
+    }
+    .stored-ball-reward-badge {
+      border-radius: 999px;
+      padding: 7px 12px;
+      background: rgba(132, 90, 191, .12);
+      color: #5a3a80;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .stored-ball-reward-note {
+      margin: 14px 0 0;
+      color: #6a5480;
+      font-size: 13px;
+      line-height: 1.55;
+      font-weight: 700;
+    }
+    .stored-ball-reward-action {
+      width: 100%;
+      min-height: 48px;
+      margin-top: 18px;
+      border: 0;
+      border-radius: 16px;
+      background: linear-gradient(135deg, var(--bag-purple), var(--bag-pink));
+      color: #fff;
+      font: inherit;
+      font-size: 15px;
+      font-weight: 900;
+      cursor: pointer;
+      box-shadow: 0 18px 28px rgba(143, 72, 163, .22);
     }
     .history-tabs {
       display: grid;
@@ -1444,6 +1933,13 @@ $roleBadgeBaseIcon = bagAssetUrl('images/icon_roles_blank.png');
     .history-filter.is-active {
       color: #fff;
       background: linear-gradient(135deg, var(--bag-purple), var(--bag-pink));
+    }
+    .history-filter-note {
+      margin: 1px 2px 0;
+      color: var(--bag-muted);
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 1.45;
     }
     .history-list {
       min-height: 0;
@@ -1516,7 +2012,7 @@ $roleBadgeBaseIcon = bagAssetUrl('images/icon_roles_blank.png');
         <button class="bag-tab<?= $initialTab === 'items' ? ' is-active' : '' ?>" type="button" data-tab="items"><?= bagEsc($t['items']) ?></button>
         <button class="bag-tab<?= $initialTab === 'roles' ? ' is-active' : '' ?>" type="button" data-tab="roles"><?= bagEsc($t['roles']) ?></button>
       </nav>
-      <button class="history-open" type="button" data-history-open><?= bagEsc($t['history']) ?></button>
+      <button class="history-open<?= $initialTab === 'history' ? ' is-active' : '' ?>" type="button" data-history-open data-tab="history" aria-pressed="<?= $initialTab === 'history' ? 'true' : 'false' ?>"><?= bagEsc($t['history']) ?></button>
     </header>
     <?php endif; ?>
     <section class="bag-content">
@@ -1526,6 +2022,9 @@ $roleBadgeBaseIcon = bagAssetUrl('images/icon_roles_blank.png');
             <div class="bag-slot" data-slot="<?= bagEsc($slot) ?>">
               <?php if ($item): ?>
                 <?php $roleBadge = is_array($item['roleBadge'] ?? null) ? $item['roleBadge'] : null; ?>
+                <?php $storedBallItem = ($item['type'] ?? '') === 'stored_ball'; ?>
+                <?php $storedBallMeta = $storedBallItem && is_array($item['meta'] ?? null) ? $item['meta'] : []; ?>
+                <?php $storedBallId = $storedBallItem ? (int) ($item['storedBallId'] ?? 0) : 0; ?>
                 <?php
                   $roleBadgeFallback = '';
                   if ($roleBadge) {
@@ -1534,14 +2033,26 @@ $roleBadgeBaseIcon = bagAssetUrl('images/icon_roles_blank.png');
                           $roleBadgeFallback = bagInitialGlyph((string) ($roleBadge['name'] ?? $item['name'] ?? 'B'));
                       }
                   }
+                  $cardClasses = 'bag-item-card';
+                  if ($roleBadge) {
+                      $cardClasses .= ' is-role-badge';
+                  }
+                  if ($storedBallItem) {
+                      $cardClasses .= ' is-stored-ball is-tier-' . bagStoredBallTierId((string) ($storedBallMeta['tierId'] ?? ''));
+                  }
+                  $cardTitle = $storedBallItem
+                      ? trim((string) ($storedBallMeta['cardTitle'] ?? $t['stored_ball_name']))
+                      : (string) ($item['name'] ?? '');
                 ?>
                 <article
-                  class="bag-item-card<?= $roleBadge ? ' is-role-badge' : '' ?>"
-                  draggable="true"
+                  class="<?= bagEsc($cardClasses) ?>"
+                  draggable="<?= $storedBallItem ? 'false' : 'true' ?>"
                   data-inventory-id="<?= bagEsc($item['inventoryId']) ?>"
                   data-item-type="<?= bagEsc($item['type']) ?>"
+                  data-effect-type="<?= bagEsc($item['effectType'] ?? '') ?>"
                   <?= $roleBadge ? 'data-role-badge-item data-role-badge="' . bagJsonAttr($roleBadge) . '" role="button" tabindex="0" aria-label="' . bagEsc($roleBadge['name'] . ' · ' . $t['role_badges']) . '"' : '' ?>
-                  title="<?= bagEsc($item['name']) ?>"
+                  <?= $storedBallItem ? 'data-stored-ball-card data-stored-ball-id="' . bagEsc($storedBallId) . '" data-stored-ball-details="' . bagJsonAttr(is_array($storedBallMeta['details'] ?? null) ? $storedBallMeta['details'] : []) . '" data-no-drag="1" role="button" tabindex="0" aria-label="' . bagEsc($cardTitle . ' · ' . $t['hold_to_open']) . '"' : '' ?>
+                  title="<?= bagEsc($cardTitle) ?>"
                 >
                   <?php if ($roleBadge): ?>
                     <div class="bag-role-badge-visual" aria-hidden="true">
@@ -1556,7 +2067,14 @@ $roleBadgeBaseIcon = bagAssetUrl('images/icon_roles_blank.png');
                   <?php else: ?>
                     <img src="<?= bagEsc($item['image']) ?>" alt="">
                   <?php endif; ?>
-                  <span class="bag-item-qty"><?= bagEsc(str_replace('{count}', number_format($item['quantity']), $t['qty'])) ?></span>
+                  <?php if (!$storedBallItem || (int) ($item['quantity'] ?? 0) > 1): ?>
+                    <span class="bag-item-qty"><?= bagEsc(str_replace('{count}', number_format($item['quantity']), $t['qty'])) ?></span>
+                  <?php endif; ?>
+                  <?php if ($storedBallItem): ?>
+                    <span class="bag-stored-ball-hold"><?= bagEsc((string) ($storedBallMeta['holdLabel'] ?? $t['hold_to_open'])) ?></span>
+                  <?php elseif (!empty($item['isUsable'])): ?>
+                    <button class="bag-item-use" type="button" data-bag-use-item="<?= bagEsc($item['inventoryId']) ?>"><?= bagEsc(($item['effectType'] ?? '') === 'loot_box' ? $t['open_item'] : $t['use_item']) ?></button>
+                  <?php endif; ?>
                   <span class="bag-item-name"><?= bagEsc($item['name']) ?></span>
                 </article>
               <?php endif; ?>
@@ -1600,36 +2118,30 @@ $roleBadgeBaseIcon = bagAssetUrl('images/icon_roles_blank.png');
           </section>
         <?php endif; ?>
       </section>
+      <section class="bag-panel is-history-panel<?= $initialTab === 'history' ? ' is-active' : '' ?>" data-panel="history">
+        <div class="history-tabs" aria-label="History filters">
+          <button class="history-filter is-active" data-history-filter="in" aria-pressed="true"><?= bagEsc($t['income']) ?></button>
+          <button class="history-filter is-active" data-history-filter="out" aria-pressed="true"><?= bagEsc($t['spend']) ?></button>
+          <button class="history-filter is-active" data-history-filter="move" aria-pressed="true"><?= bagEsc($t['movement']) ?></button>
+        </div>
+        <p class="history-filter-note"><?= bagEsc($t['history_filter_hint']) ?></p>
+        <div class="history-list">
+          <?php if (!$history): ?><div class="empty"><?= bagEsc($t['empty_history']) ?></div><?php endif; ?>
+          <?php foreach ($history as $row): ?>
+            <?php $historyKind = (string) ($row['kind'] ?? 'in'); ?>
+            <article class="history-row" data-history-kind="<?= bagEsc($row['kind'] ?? 'in') ?>">
+              <div>
+                <strong><?= bagEsc($row['title']) ?></strong>
+                <small><?= bagEsc($row['date']) ?></small>
+                <span class="history-source"><?= bagEsc($row['source']) ?></span>
+              </div>
+              <span class="pill <?= $historyKind === 'out' ? 'is-out' : ($historyKind === 'move' ? 'is-move' : 'is-in') ?>"><?= bagEsc($row['detail']) ?></span>
+            </article>
+          <?php endforeach; ?>
+        </div>
+      </section>
     </section>
   </main>
-
-  <aside class="history-drawer" data-history-drawer aria-hidden="true">
-    <section class="history-card">
-      <header class="history-head">
-        <h2><?= bagEsc($t['history']) ?></h2>
-        <button class="history-close" type="button" data-history-close aria-label="Close">×</button>
-      </header>
-      <div class="history-tabs" aria-label="History filters">
-        <button class="history-filter is-active" data-history-filter="in" aria-pressed="true"><?= bagEsc($t['income']) ?></button>
-        <button class="history-filter is-active" data-history-filter="out" aria-pressed="true"><?= bagEsc($t['spend']) ?></button>
-        <button class="history-filter is-active" data-history-filter="move" aria-pressed="true"><?= bagEsc($t['movement']) ?></button>
-      </div>
-      <div class="history-list">
-        <?php if (!$history): ?><div class="empty"><?= bagEsc($t['empty_history']) ?></div><?php endif; ?>
-        <?php foreach ($history as $row): ?>
-          <?php $historyKind = (string) ($row['kind'] ?? 'in'); ?>
-          <article class="history-row" data-history-kind="<?= bagEsc($row['kind'] ?? 'in') ?>">
-            <div>
-              <strong><?= bagEsc($row['title']) ?></strong>
-              <small><?= bagEsc($row['date']) ?></small>
-              <span class="history-source"><?= bagEsc($row['source']) ?></span>
-            </div>
-            <span class="pill <?= $historyKind === 'out' ? 'is-out' : ($historyKind === 'move' ? 'is-move' : 'is-in') ?>"><?= bagEsc($row['detail']) ?></span>
-          </article>
-        <?php endforeach; ?>
-      </div>
-    </section>
-  </aside>
 
   <aside class="role-badge-drawer" data-role-badge-drawer aria-hidden="true">
     <section class="role-badge-sheet">
@@ -1680,6 +2192,35 @@ $roleBadgeBaseIcon = bagAssetUrl('images/icon_roles_blank.png');
     </section>
   </aside>
 
+  <aside class="stored-ball-menu-modal" data-stored-ball-menu aria-hidden="true">
+    <section class="stored-ball-menu-card" role="dialog" aria-modal="true" aria-labelledby="storedBallMenuTitle">
+      <button class="stored-ball-menu-close" type="button" data-stored-ball-menu-close aria-label="<?= bagEsc($t['role_badge_modal_close']) ?>">×</button>
+      <p class="stored-ball-menu-kicker"><?= bagEsc($t['stored_ball_menu_title']) ?></p>
+      <h2 id="storedBallMenuTitle" class="stored-ball-menu-title"><?= bagEsc($t['stored_ball_menu_title']) ?></h2>
+      <p id="storedBallMenuSubtitle" class="stored-ball-menu-subtitle"><?= bagEsc($t['stored_ball_details_hint']) ?></p>
+      <div id="storedBallDetailList" class="stored-ball-detail-list" hidden></div>
+      <div class="stored-ball-menu-actions">
+        <button class="stored-ball-menu-action is-primary" type="button" data-stored-ball-menu-open><?= bagEsc($t['stored_ball_menu_open']) ?></button>
+        <button class="stored-ball-menu-action" type="button" data-stored-ball-menu-details><?= bagEsc($t['stored_ball_menu_details']) ?></button>
+      </div>
+    </section>
+  </aside>
+
+  <aside class="stored-ball-reward-modal" data-stored-ball-reward aria-hidden="true">
+    <section class="stored-ball-reward-card" role="dialog" aria-modal="true" aria-labelledby="storedBallRewardTitle">
+      <button class="stored-ball-reward-close" type="button" data-stored-ball-reward-close aria-label="<?= bagEsc($t['role_badge_modal_close']) ?>">×</button>
+      <div class="stored-ball-reward-visual" aria-hidden="true">
+        <img id="storedBallRewardImage" src="" alt="" hidden>
+        <span id="storedBallRewardFallback" class="stored-ball-reward-fallback" hidden></span>
+      </div>
+      <p class="stored-ball-reward-kicker"><?= bagEsc($t['stored_ball_reward_title']) ?></p>
+      <h2 id="storedBallRewardTitle" class="stored-ball-reward-title"><?= bagEsc($t['stored_ball_reward_fallback_name']) ?></h2>
+      <div id="storedBallRewardBadges" class="stored-ball-reward-badges" hidden></div>
+      <p id="storedBallRewardNote" class="stored-ball-reward-note"><?= bagEsc($t['stored_ball_reward_item_note']) ?></p>
+      <button class="stored-ball-reward-action" type="button" data-stored-ball-reward-close><?= bagEsc($t['stored_ball_reward_close']) ?></button>
+    </section>
+  </aside>
+
   <div id="bagToast" class="bag-toast" aria-live="polite"></div>
 
   <script>
@@ -1717,9 +2258,14 @@ $roleBadgeBaseIcon = bagAssetUrl('images/icon_roles_blank.png');
       const chars = Array.from(compactText(badge?.name || ""));
       return chars[0] || "B";
     };
+    const normalizeBagTab = (tab) => tab === "roles" ? "roles" : (tab === "history" ? "history" : "items");
     window.bagSetTab = (tab) => {
-      const normalized = tab === "roles" ? "roles" : "items";
-      document.querySelectorAll("[data-tab]").forEach((item) => item.classList.toggle("is-active", item.dataset.tab === normalized));
+      const normalized = normalizeBagTab(tab);
+      document.querySelectorAll("[data-tab]").forEach((item) => {
+        const active = item.dataset.tab === normalized;
+        item.classList.toggle("is-active", active);
+        item.setAttribute("aria-pressed", active ? "true" : "false");
+      });
       document.querySelectorAll("[data-panel]").forEach((panel) => panel.classList.toggle("is-active", panel.dataset.panel === normalized));
     };
     document.querySelectorAll("[data-tab]").forEach((button) => {
@@ -1732,22 +2278,7 @@ $roleBadgeBaseIcon = bagAssetUrl('images/icon_roles_blank.png');
       });
     }
 
-    const drawer = document.querySelector("[data-history-drawer]");
-    window.bagOpenHistory = () => {
-      drawer?.classList.add("is-open");
-      drawer?.setAttribute("aria-hidden", "false");
-    };
-    document.querySelector("[data-history-open]")?.addEventListener("click", window.bagOpenHistory);
-    document.querySelector("[data-history-close]")?.addEventListener("click", () => {
-      drawer?.classList.remove("is-open");
-      drawer?.setAttribute("aria-hidden", "true");
-    });
-    drawer?.addEventListener("click", (event) => {
-      if (event.target === drawer) {
-        drawer.classList.remove("is-open");
-        drawer.setAttribute("aria-hidden", "true");
-      }
-    });
+    window.bagOpenHistory = () => window.bagSetTab("history");
     const applyHistoryFilters = () => {
       const activeFilters = new Set(Array.from(document.querySelectorAll("[data-history-filter].is-active")).map((button) => button.dataset.historyFilter || "in"));
       document.querySelectorAll("[data-history-filter]").forEach((button) => {
@@ -1779,6 +2310,28 @@ $roleBadgeBaseIcon = bagAssetUrl('images/icon_roles_blank.png');
     const searchLoadingText = <?= json_encode($t['search_loading']) ?>;
     const searchEmptyText = <?= json_encode($t['search_empty']) ?>;
     const searchHintText = <?= json_encode($t['search_submit_hint']) ?>;
+    const itemUsedText = <?= json_encode($t['item_used']) ?>;
+    const itemOpenedText = <?= json_encode($t['item_opened']) ?>;
+    const storedBallOpenedText = <?= json_encode($t['stored_ball_opened']) ?>;
+    const holdToOpenText = <?= json_encode($t['hold_to_open']) ?>;
+    const storedBallMenuTitleText = <?= json_encode($t['stored_ball_menu_title']) ?>;
+    const storedBallDetailsTitleText = <?= json_encode($t['stored_ball_details_title']) ?>;
+    const storedBallDetailsHintText = <?= json_encode($t['stored_ball_details_hint']) ?>;
+    const storedBallDetailStoredAtText = <?= json_encode($t['stored_ball_detail_stored_at']) ?>;
+    const storedBallDetailSpinAtText = <?= json_encode($t['stored_ball_detail_spin_at']) ?>;
+    const storedBallDetailTierText = <?= json_encode($t['stored_ball_detail_tier']) ?>;
+    const storedBallDetailSpinByText = <?= json_encode($t['stored_ball_detail_spin_by']) ?>;
+    const storedBallDetailCountText = <?= json_encode($t['stored_ball_detail_count']) ?>;
+    const storedBallDetailDrawIdText = <?= json_encode($t['stored_ball_detail_draw_id']) ?>;
+    const storedBallDetailFreeSpinText = <?= json_encode($t['stored_ball_detail_free_spin']) ?>;
+    const storedBallDetailUnknownText = <?= json_encode($t['stored_ball_detail_unknown']) ?>;
+    const storedBallDetailButtonText = <?= json_encode($t['stored_ball_detail_button']) ?>;
+    const storedBallRewardItemNoteText = <?= json_encode($t['stored_ball_reward_item_note']) ?>;
+    const storedBallRewardItemQtyNoteText = <?= json_encode($t['stored_ball_reward_item_qty_note']) ?>;
+    const storedBallRewardRoleNoteText = <?= json_encode($t['stored_ball_reward_role_note']) ?>;
+    const storedBallRewardCurrencyNoteText = <?= json_encode($t['stored_ball_reward_currency_note']) ?>;
+    const storedBallRewardCurrencyQtyNoteText = <?= json_encode($t['stored_ball_reward_currency_qty_note']) ?>;
+    const storedBallRewardFallbackNameText = <?= json_encode($t['stored_ball_reward_fallback_name']) ?>;
     const toast = document.getElementById("bagToast");
     const roleBadgeDrawer = document.querySelector("[data-role-badge-drawer]");
     const roleBadgeDrawerName = document.getElementById("roleBadgeDrawerName");
@@ -1793,8 +2346,23 @@ $roleBadgeBaseIcon = bagAssetUrl('images/icon_roles_blank.png');
     const roleSearchStatus = document.getElementById("roleSearchStatus");
     const roleSearchResults = document.getElementById("roleSearchResults");
     const roleSearchBadgeName = document.getElementById("roleSearchBadgeName");
+    const storedBallMenuModal = document.querySelector("[data-stored-ball-menu]");
+    const storedBallMenuTitle = document.getElementById("storedBallMenuTitle");
+    const storedBallMenuSubtitle = document.getElementById("storedBallMenuSubtitle");
+    const storedBallDetailList = document.getElementById("storedBallDetailList");
+    const storedBallMenuOpenButton = document.querySelector("[data-stored-ball-menu-open]");
+    const storedBallMenuDetailsButton = document.querySelector("[data-stored-ball-menu-details]");
+    const storedBallRewardModal = document.querySelector("[data-stored-ball-reward]");
+    const storedBallRewardImage = document.getElementById("storedBallRewardImage");
+    const storedBallRewardFallback = document.getElementById("storedBallRewardFallback");
+    const storedBallRewardTitle = document.getElementById("storedBallRewardTitle");
+    const storedBallRewardBadges = document.getElementById("storedBallRewardBadges");
+    const storedBallRewardNote = document.getElementById("storedBallRewardNote");
     let activeRoleBadge = null;
+    let activeStoredBallCard = null;
+    let activeStoredBallDetails = {};
     let roleSearchTimer = 0;
+    let storedBallRewardReloadOnClose = false;
 
     const showToast = (message) => {
       if (!toast) return;
@@ -1804,6 +2372,12 @@ $roleBadgeBaseIcon = bagAssetUrl('images/icon_roles_blank.png');
       showToast.timerId = window.setTimeout(() => {
         toast.classList.remove("is-visible");
       }, 2200);
+    };
+    const hideToast = () => {
+      if (!toast) return;
+      window.clearTimeout(showToast.timerId || 0);
+      toast.classList.remove("is-visible");
+      toast.textContent = "";
     };
 
     const updateRoleBadgeCard = (inventoryId, remainingQuantity) => {
@@ -1941,6 +2515,283 @@ $roleBadgeBaseIcon = bagAssetUrl('images/icon_roles_blank.png');
       window.setTimeout(() => window.location.reload(), 900);
     };
 
+    const useBagItem = async (inventoryId, effectType = "") => {
+      const response = await fetch(window.location.href, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ action: "use_item", inventoryId })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.ok) {
+        throw new Error(payload?.message || "use item failed");
+      }
+      showToast(effectType === "loot_box" ? itemOpenedText : itemUsedText);
+      window.setTimeout(() => window.location.reload(), 700);
+    };
+
+    const openStoredBall = async (storedBallId) => {
+      const response = await fetch(window.location.href, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ action: "open_stored_ball", storedBallId })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.ok) {
+        throw new Error(payload?.message || "open stored ball failed");
+      }
+      return payload?.result || null;
+    };
+
+    const parseStoredBallDetails = (card) => {
+      try {
+        const parsed = JSON.parse(card?.dataset?.storedBallDetails || "{}");
+        return parsed && typeof parsed === "object" ? parsed : {};
+      } catch (error) {
+        return {};
+      }
+    };
+
+    const formatStoredBallDate = (value) => {
+      const raw = compactText(value);
+      if (!raw) return storedBallDetailUnknownText;
+      const numeric = Number(raw);
+      const date = Number.isFinite(numeric) && numeric > 0
+        ? new Date(numeric * 1000)
+        : new Date(raw.replace(" ", "T"));
+      if (Number.isNaN(date.getTime())) return raw;
+      return date.toLocaleString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    };
+
+    const storedBallSpinSpendText = (details) => {
+      if (details?.usedFreeSpin) {
+        const source = compactText(details?.freeSpinSource);
+        return source ? `${storedBallDetailFreeSpinText} · ${source}` : storedBallDetailFreeSpinText;
+      }
+      const cost = Number(details?.cost || 0);
+      const costPerSpin = Number(details?.costPerSpin || 0);
+      const currency = compactText(details?.currency);
+      if (cost > 0 && currency) return `${cost.toLocaleString()} ${currency}`;
+      if (costPerSpin > 0 && currency) return `${costPerSpin.toLocaleString()} ${currency}`;
+      const buttonId = Number(details?.buttonId || 0);
+      return buttonId > 0 ? storedBallDetailButtonText.replace("{buttonId}", buttonId.toLocaleString()) : storedBallDetailUnknownText;
+    };
+
+    const renderStoredBallDetails = (details) => {
+      const tierName = compactText(details?.tierName || details?.tierId) || storedBallMenuTitleText;
+      const rows = [
+        [storedBallDetailStoredAtText, formatStoredBallDate(details?.storedAt || details?.createdAt)],
+        [storedBallDetailSpinAtText, formatStoredBallDate(details?.spinCommittedAt)],
+        [storedBallDetailTierText, tierName],
+        [storedBallDetailSpinByText, storedBallSpinSpendText(details)],
+        [storedBallDetailCountText, Math.max(1, Number(details?.count || 1)).toLocaleString()],
+        [storedBallDetailDrawIdText, compactText(details?.drawId) || storedBallDetailUnknownText]
+      ];
+      return rows.map(([label, value]) => `
+        <div class="stored-ball-detail-row">
+          <strong>${escHtml(label)}</strong>
+          <span>${escHtml(value)}</span>
+        </div>
+      `).join("");
+    };
+
+    const closeStoredBallMenu = () => {
+      if (!storedBallMenuModal) return;
+      storedBallMenuModal.classList.remove("is-open");
+      storedBallMenuModal.setAttribute("aria-hidden", "true");
+      document.body.classList.remove("is-stored-ball-menu-open");
+      if (storedBallMenuOpenButton) storedBallMenuOpenButton.disabled = false;
+      activeStoredBallCard = null;
+      activeStoredBallDetails = {};
+    };
+
+    const showStoredBallDetails = () => {
+      if (!storedBallDetailList || !storedBallMenuTitle || !storedBallMenuSubtitle) return;
+      storedBallMenuTitle.textContent = storedBallDetailsTitleText;
+      storedBallMenuSubtitle.textContent = storedBallDetailsHintText;
+      storedBallDetailList.hidden = false;
+      storedBallDetailList.innerHTML = renderStoredBallDetails(activeStoredBallDetails);
+    };
+
+    const openStoredBallMenu = (card) => {
+      if (!storedBallMenuModal || !card || card.dataset.opening === "1") return;
+      hideToast();
+      activeStoredBallCard = card;
+      activeStoredBallDetails = parseStoredBallDetails(card);
+      const title = compactText(card.getAttribute("title")) || storedBallMenuTitleText;
+      if (storedBallMenuTitle) storedBallMenuTitle.textContent = title;
+      if (storedBallMenuSubtitle) storedBallMenuSubtitle.textContent = storedBallDetailsHintText;
+      if (storedBallDetailList) {
+        storedBallDetailList.hidden = true;
+        storedBallDetailList.innerHTML = "";
+      }
+      if (storedBallMenuOpenButton) storedBallMenuOpenButton.disabled = false;
+      storedBallMenuModal.classList.add("is-open");
+      storedBallMenuModal.setAttribute("aria-hidden", "false");
+      document.body.classList.add("is-stored-ball-menu-open");
+    };
+
+    const openActiveStoredBallFromMenu = async () => {
+      const card = activeStoredBallCard;
+      const storedBallId = Number(card?.dataset?.storedBallId || 0);
+      if (!card || !storedBallId || card.dataset.opening === "1") return;
+      card.dataset.opening = "1";
+      if (storedBallMenuOpenButton) storedBallMenuOpenButton.disabled = true;
+      try {
+        const result = await openStoredBall(storedBallId);
+        card.remove();
+        closeStoredBallMenu();
+        openStoredBallRewardModal(result);
+      } catch (error) {
+        delete card.dataset.opening;
+        if (storedBallMenuOpenButton) storedBallMenuOpenButton.disabled = false;
+        showToast(error instanceof Error ? error.message : "open stored ball failed");
+      }
+    };
+
+    const storedBallRewardDurationText = (prize) => {
+      if (compactText(prize?.type) !== "role") return "";
+      const label = compactText(prize?.roleDurationLabel);
+      if (label) return label;
+      const days = Number(prize?.roleDurationDays || 0);
+      return days > 0 ? daysNameText.replace("{count}", days.toLocaleString()) : permanentText;
+    };
+
+    const storedBallRewardDisplayName = (prize) => {
+      const baseName = compactText(prize?.name || prize?.shortName) || storedBallRewardFallbackNameText;
+      const duration = storedBallRewardDurationText(prize);
+      return duration ? `${baseName} ${duration}` : baseName;
+    };
+
+    const storedBallRewardBadgeList = (prize) => {
+      const badges = [];
+      if (compactText(prize?.tierName)) badges.push(compactText(prize.tierName));
+      if (compactText(prize?.roleSeriesName)) badges.push(compactText(prize.roleSeriesName));
+      if (compactText(prize?.roleTier)) badges.push(`Tier ${compactText(prize.roleTier)}`);
+      if (compactText(prize?.type) === "role") {
+        const duration = storedBallRewardDurationText(prize);
+        if (duration) badges.push(duration);
+      }
+      return badges.slice(0, 4);
+    };
+
+    const storedBallRewardNoteText = (result, prize) => {
+      const settlement = result?.settlement || {};
+      if (settlement?.rewardType === "role") {
+        return storedBallRewardRoleNoteText;
+      }
+      if (settlement?.rewardType === "currency") {
+        const amount = Number(settlement?.reward?.wallet?.amount || prize?.amount || prize?.quantity || 0);
+        const unit = compactText(prize?.unitCode || prize?.currency || "");
+        if (amount > 0 && unit) {
+          return storedBallRewardCurrencyQtyNoteText
+            .replace("{count}", amount.toLocaleString())
+            .replace("{unit}", unit);
+        }
+        return storedBallRewardCurrencyNoteText;
+      }
+      const quantity = Number(settlement?.reward?.item?.quantityDelta || prize?.quantity || 0);
+      if (quantity > 1) {
+        return storedBallRewardItemQtyNoteText.replace("{count}", quantity.toLocaleString());
+      }
+      return storedBallRewardItemNoteText;
+    };
+
+    const closeStoredBallRewardModal = ({ reload = storedBallRewardReloadOnClose } = {}) => {
+      if (!storedBallRewardModal) return;
+      const shouldReload = Boolean(reload);
+      storedBallRewardReloadOnClose = false;
+      storedBallRewardModal.classList.remove("is-open");
+      storedBallRewardModal.setAttribute("aria-hidden", "true");
+      document.body.classList.remove("is-stored-ball-reward-open");
+      if (shouldReload) {
+        window.location.reload();
+      }
+    };
+
+    const openStoredBallRewardModal = (result) => {
+      hideToast();
+      if (!storedBallRewardModal || !storedBallRewardTitle || !storedBallRewardNote) {
+        showToast(storedBallOpenedText);
+        window.setTimeout(() => window.location.reload(), 700);
+        return;
+      }
+
+      const prize = result?.prize || {};
+      const displayName = storedBallRewardDisplayName(prize);
+      const fallbackLabel = badgeFallbackText({ name: displayName });
+      const imageSrc = compactText(prize?.roleIconUrl || prize?.image);
+
+      storedBallRewardTitle.textContent = displayName;
+      storedBallRewardNote.textContent = storedBallRewardNoteText(result, prize);
+
+      const badges = storedBallRewardBadgeList(prize);
+      if (storedBallRewardBadges) {
+        storedBallRewardBadges.hidden = badges.length === 0;
+        storedBallRewardBadges.innerHTML = badges.map((badge) => (
+          `<span class="stored-ball-reward-badge">${escHtml(badge)}</span>`
+        )).join("");
+      }
+
+      if (storedBallRewardImage && storedBallRewardFallback) {
+        storedBallRewardImage.hidden = !imageSrc;
+        storedBallRewardImage.alt = displayName;
+        storedBallRewardImage.src = imageSrc || "";
+        storedBallRewardImage.onerror = () => {
+          storedBallRewardImage.hidden = true;
+          storedBallRewardFallback.hidden = false;
+          storedBallRewardFallback.textContent = fallbackLabel;
+        };
+        storedBallRewardFallback.hidden = Boolean(imageSrc);
+        storedBallRewardFallback.textContent = fallbackLabel;
+      }
+
+      storedBallRewardReloadOnClose = true;
+      storedBallRewardModal.classList.add("is-open");
+      storedBallRewardModal.setAttribute("aria-hidden", "false");
+      document.body.classList.add("is-stored-ball-reward-open");
+    };
+
+    storedBallMenuModal?.addEventListener("click", (event) => {
+      if (event.target === storedBallMenuModal) {
+        closeStoredBallMenu();
+      }
+    });
+    document.querySelectorAll("[data-stored-ball-menu-close]").forEach((button) => {
+      button.addEventListener("click", closeStoredBallMenu);
+    });
+    storedBallMenuDetailsButton?.addEventListener("click", showStoredBallDetails);
+    storedBallMenuOpenButton?.addEventListener("click", () => {
+      void openActiveStoredBallFromMenu();
+    });
+
+    storedBallRewardModal?.addEventListener("click", (event) => {
+      if (event.target === storedBallRewardModal) {
+        closeStoredBallRewardModal();
+      }
+    });
+    document.querySelectorAll("[data-stored-ball-reward-close]").forEach((button) => {
+      button.addEventListener("click", () => {
+        closeStoredBallRewardModal();
+      });
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && storedBallMenuModal?.classList.contains("is-open")) {
+        event.preventDefault();
+        closeStoredBallMenu();
+        return;
+      }
+      if (event.key === "Escape" && storedBallRewardModal?.classList.contains("is-open")) {
+        event.preventDefault();
+        closeStoredBallRewardModal();
+      }
+    });
+
     const renderRoleSearchResults = (members) => {
       roleSearchResults.innerHTML = members.map((member) => `
         <button class="role-search-result" type="button" data-target-user-id="${escHtml(member.userId)}">
@@ -1971,7 +2822,7 @@ $roleBadgeBaseIcon = bagAssetUrl('images/icon_roles_blank.png');
     };
 
     let draggedCard = null;
-    document.querySelectorAll(".bag-item-card").forEach((card) => {
+    document.querySelectorAll('.bag-item-card[draggable="true"]').forEach((card) => {
       card.addEventListener("dragstart", (event) => {
         draggedCard = card;
         event.dataTransfer.effectAllowed = "move";
@@ -1987,6 +2838,8 @@ $roleBadgeBaseIcon = bagAssetUrl('images/icon_roles_blank.png');
     document.querySelectorAll(".bag-slot").forEach((slot) => {
       slot.addEventListener("dragover", (event) => {
         if (!draggedCard) return;
+        const existing = slot.querySelector(".bag-item-card");
+        if (existing && existing !== draggedCard && existing.dataset.noDrag === "1") return;
         event.preventDefault();
         slot.classList.add("is-drop-target");
       });
@@ -1997,6 +2850,7 @@ $roleBadgeBaseIcon = bagAssetUrl('images/icon_roles_blank.png');
         if (!draggedCard) return;
         const fromSlot = draggedCard.closest(".bag-slot");
         const existing = slot.querySelector(".bag-item-card");
+        if (existing && existing !== draggedCard && existing.dataset.noDrag === "1") return;
         if (existing && fromSlot) {
           fromSlot.appendChild(existing);
           postMove(existing.dataset.inventoryId || "", Number(fromSlot.dataset.slot || 0));
@@ -2035,6 +2889,84 @@ $roleBadgeBaseIcon = bagAssetUrl('images/icon_roles_blank.png');
       } catch (error) {
         showToast(error?.message || "apply failed");
       }
+    });
+    document.querySelectorAll("[data-bag-use-item]").forEach((button) => {
+      button.addEventListener("click", async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const card = button.closest(".bag-item-card");
+        const inventoryId = Number(button.dataset.bagUseItem || 0);
+        const effectType = String(card?.dataset.effectType || "");
+        if (!inventoryId) return;
+        button.disabled = true;
+        try {
+          await useBagItem(inventoryId, effectType);
+        } catch (error) {
+          showToast(error instanceof Error ? error.message : "use item failed");
+          button.disabled = false;
+        }
+      });
+    });
+    document.querySelectorAll("[data-stored-ball-card]").forEach((card) => {
+      const storedBallId = Number(card.dataset.storedBallId || 0);
+      let holdTimer = 0;
+      let holdTriggered = false;
+
+      const resetHold = () => {
+        if (holdTimer) {
+          window.clearTimeout(holdTimer);
+          holdTimer = 0;
+        }
+        card.classList.remove("is-holding");
+      };
+
+      const triggerMenu = () => {
+        if (!storedBallId || card.dataset.opening === "1") return;
+        holdTriggered = true;
+        holdTimer = 0;
+        card.classList.remove("is-holding");
+        openStoredBallMenu(card);
+      };
+
+      card.addEventListener("pointerdown", (event) => {
+        if (event.button !== undefined && event.button !== 0) return;
+        if (card.dataset.opening === "1") return;
+        holdTriggered = false;
+        resetHold();
+        card.classList.add("is-holding");
+        holdTimer = window.setTimeout(() => {
+          triggerMenu();
+        }, 550);
+      });
+
+      ["pointerup", "pointerleave", "pointercancel"].forEach((eventName) => {
+        card.addEventListener(eventName, () => {
+          if (!holdTriggered) {
+            resetHold();
+          }
+        });
+      });
+
+      card.addEventListener("contextmenu", (event) => {
+        event.preventDefault();
+        triggerMenu();
+      });
+
+      card.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (holdTriggered) {
+          holdTriggered = false;
+          return;
+        }
+        showToast(holdToOpenText);
+      });
+
+      card.addEventListener("keydown", async (event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        triggerMenu();
+      });
     });
 
     document.querySelector("[data-role-badge-friend]")?.addEventListener("click", () => {

@@ -347,6 +347,9 @@ final class GachaSpinHistoryService
         if (!empty($draw['refundedAt'])) {
             return 'refunded';
         }
+        if (!empty($draw['storedBallAt'])) {
+            return 'stored_ball';
+        }
         if (!empty($draw['prizeResolvedAt'])) {
             return 'resolved';
         }
@@ -392,6 +395,7 @@ final class GachaSpinHistoryService
                 'prizeResolvedAt' => (int) ($draw['prizeResolvedAt'] ?? 0),
                 'completedAt' => (int) ($draw['completedAt'] ?? 0),
                 'refundedAt' => (int) ($draw['refundedAt'] ?? 0),
+                'storedBallAt' => (int) ($draw['storedBallAt'] ?? 0),
             ],
         ];
     }

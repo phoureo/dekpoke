@@ -7,6 +7,8 @@ Bootstrap::init();
 
 $boardCode = preg_replace('/[^a-z0-9_-]+/i', '-', strtolower(trim((string) ($_GET['boardCode'] ?? GachaMileageService::DEFAULT_BOARD_CODE)))) ?: GachaMileageService::DEFAULT_BOARD_CODE;
 $playerToken = trim((string) ($_GET['player_token'] ?? ''));
+$previewMode = in_array(strtolower(trim((string) ($_GET['preview'] ?? ''))), ['1', 'true', 'yes', 'on'], true);
+$assetManifestRuntimeVersion = (string) (@filemtime(__DIR__ . '/assets/js/asset-manifest-runtime.js') ?: time());
 ?>
 <!DOCTYPE html>
 <html lang="th">
@@ -96,6 +98,12 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
       inset: 0;
     }
 
+    body.is-preview-mode .mileage-login-button,
+    body.is-preview-mode .walk-action,
+    body.is-preview-mode .boost-button {
+      display: none !important;
+    }
+
     button,
     input {
       font: inherit;
@@ -112,6 +120,16 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
       user-select: none;
     }
 
+    .viewer.has-overlay-open .hud-card,
+    .viewer.has-overlay-open .self-button,
+    .viewer.has-overlay-open .rank-button,
+    .viewer.has-overlay-open .boost-button,
+    .viewer.has-overlay-open .walk-action,
+    .viewer.has-overlay-open .zoom-slider-wrap {
+      opacity: 0;
+      pointer-events: none;
+    }
+
     .scene {
       position: absolute;
       inset: 0;
@@ -126,13 +144,8 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
 
     .board-shell {
       position: absolute;
-      left: 0;
-      top: 0;
-      width: var(--board-width, 941px);
-      height: var(--board-height, 10368px);
+      inset: 0;
       background: transparent;
-      transform-origin: 0 0;
-      will-change: transform;
       contain: layout paint style;
     }
 
@@ -143,8 +156,15 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
     .board-track,
     .board-overlay,
     .overlay-layer {
+      display: none;
+    }
+
+    .board-canvas {
       position: absolute;
       inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
       pointer-events: none;
     }
 
@@ -410,14 +430,14 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
     .pill {
       padding: 5px 7px;
       border-radius: 999px;
-      border: 1px solid rgba(225, 240, 255, 0.16);
-      background: rgba(6, 10, 24, 0.32);
-      color: var(--muted);
+      border: 1px solid rgba(255, 255, 255, 0.52);
+      background: rgba(255, 242, 251, 0.42);
+      color: rgba(59, 40, 82, 0.78);
       font-size: 10px;
       line-height: 1;
       white-space: nowrap;
-      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.14);
-      backdrop-filter: blur(10px);
+      box-shadow: 0 10px 24px rgba(18, 12, 38, 0.12);
+      backdrop-filter: blur(14px) saturate(1.04);
     }
 
     .pill strong {
@@ -478,12 +498,12 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
       height: 50px;
       display: grid;
       place-items: center;
-      border: 1px solid rgba(236, 246, 255, 0.28);
+      border: 1px solid rgba(255, 255, 255, 0.56);
       border-radius: 999px;
-      background: rgba(7, 11, 28, 0.48);
-      color: #f4fbff;
-      box-shadow: 0 14px 32px rgba(0, 0, 0, 0.28);
-      backdrop-filter: blur(14px);
+      background: rgba(255, 244, 252, 0.46);
+      color: #2a1739;
+      box-shadow: 0 16px 34px rgba(22, 12, 42, 0.16);
+      backdrop-filter: blur(16px) saturate(1.06);
       cursor: pointer;
       transition: transform 160ms ease, background 160ms ease, border-color 160ms ease;
     }
@@ -499,8 +519,9 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
       z-index: 35;
       right: max(16px, calc(env(safe-area-inset-right) + 16px));
       bottom: max(calc(var(--embed-bottom-offset) + 82px), calc(env(safe-area-inset-bottom) + var(--embed-bottom-offset) + 82px));
+      width: 48px;
       height: 42px;
-      padding: 0 16px;
+      padding: 0;
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -510,8 +531,8 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
         radial-gradient(circle at 30% 24%, rgba(255, 255, 255, 0.22), transparent 34%),
         linear-gradient(135deg, rgba(255, 222, 143, 0.96), rgba(255, 159, 228, 0.94));
       color: #1d1630;
-      font: 700 13px/1 var(--font);
-      letter-spacing: 0.01em;
+      font: 900 18px/1 var(--font);
+      letter-spacing: 0;
       white-space: nowrap;
       box-shadow: 0 18px 38px rgba(0, 0, 0, 0.28);
       cursor: pointer;
@@ -520,6 +541,13 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
 
     .boost-button:active {
       transform: translateY(1px) scale(0.98);
+    }
+
+    .boost-button.is-boosting {
+      transform: translateY(1px) scale(0.98);
+      box-shadow:
+        0 18px 40px rgba(255, 153, 228, 0.26),
+        0 0 18px rgba(255, 236, 150, 0.38);
     }
 
     .boost-button:disabled {
@@ -623,19 +651,19 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
       height: 46px;
       display: grid;
       place-items: center;
-      border: 1px solid rgba(236, 246, 255, 0.24);
+      border: 1px solid rgba(255, 255, 255, 0.56);
       border-radius: 999px;
-      background: rgba(7, 11, 28, 0.46);
-      color: #f7fbff;
-      box-shadow: 0 14px 32px rgba(0, 0, 0, 0.24);
-      backdrop-filter: blur(14px);
+      background: rgba(255, 244, 252, 0.46);
+      color: #2a1739;
+      box-shadow: 0 16px 34px rgba(22, 12, 42, 0.16);
+      backdrop-filter: blur(16px) saturate(1.06);
       cursor: pointer;
       transition: transform 160ms ease, background 160ms ease;
     }
 
     .rank-button:active {
       transform: scale(0.96);
-      background: rgba(143, 245, 255, 0.2);
+      background: rgba(255, 222, 243, 0.72);
     }
 
     .rank-button svg {
@@ -651,117 +679,266 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
     .leaderboard-panel {
       position: fixed;
       z-index: 44;
-      right: max(16px, calc(env(safe-area-inset-right) + 16px));
-      bottom: max(calc(var(--embed-bottom-offset) + 136px), calc(env(safe-area-inset-bottom) + var(--embed-bottom-offset) + 136px));
-      width: min(330px, calc(100vw - 32px));
-      max-height: min(520px, calc(100vh - 180px));
+      inset: 0;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding:
+        max(132px, calc(env(safe-area-inset-top) + 112px))
+        max(14px, env(safe-area-inset-right))
+        max(calc(var(--embed-bottom-offset) + 180px), calc(env(safe-area-inset-bottom) + var(--embed-bottom-offset) + 168px))
+        max(14px, env(safe-area-inset-left));
+      background: transparent;
+      color: #231437;
+    }
+
+    .leaderboard-shell {
+      position: relative;
+      z-index: 0;
+      width: min(842px, calc(100vw - 28px));
+      max-height: min(1182px, calc(100dvh - var(--embed-bottom-offset) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 300px));
+      margin-top: 0;
       display: grid;
-      grid-template-rows: auto auto minmax(0, 1fr);
-      gap: 10px;
-      padding: 12px;
-      border: 1px solid rgba(236, 246, 255, 0.18);
-      border-radius: 18px;
-      background: rgba(6, 10, 24, 0.78);
-      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.42);
-      backdrop-filter: blur(18px);
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      gap: 14px;
+      padding: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.78);
+      border-radius: 38px;
+      background:
+        radial-gradient(circle at 12% 4%, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0) 22%),
+        radial-gradient(circle at 92% 10%, rgba(255, 218, 174, 0.28), rgba(255, 218, 174, 0) 18%),
+        linear-gradient(158deg, rgba(233, 245, 255, 0.98), rgba(246, 240, 255, 0.98) 42%, rgba(218, 209, 255, 0.96));
+      box-shadow:
+        0 30px 64px rgba(29, 16, 54, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+      overflow: hidden;
+      isolation: isolate;
+      backdrop-filter: blur(12px) saturate(1.03);
+    }
+
+    .leaderboard-shell::before,
+    .leaderboard-shell::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    .leaderboard-shell::before {
+      inset: -18px;
+      z-index: -2;
+      background:
+        radial-gradient(circle at 20% 10%, rgba(255, 208, 230, 0.32), transparent 22%),
+        radial-gradient(circle at 82% 84%, rgba(133, 237, 255, 0.28), transparent 22%),
+        radial-gradient(ellipse at 50% 50%, rgba(255, 255, 255, 0.16), transparent 70%);
+      filter: blur(14px);
+      opacity: 0.92;
+    }
+
+    .leaderboard-shell::after {
+      inset: 10px;
+      z-index: -1;
+      border-radius: 29px;
+      border: 1px solid rgba(255, 255, 255, 0.56);
+      opacity: 0.78;
+    }
+
+    .leaderboard-shell.is-step-list {
+      width: min(470px, calc(100vw - 28px));
+      max-height: min(620px, calc(100dvh - var(--embed-bottom-offset) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 330px));
+      margin-top: min(44px, 5dvh);
     }
 
     .leaderboard-head {
-      display: flex;
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
       align-items: center;
-      justify-content: space-between;
-      gap: 10px;
+      gap: 12px;
+      padding: 4px 4px 0;
+    }
+
+    .leaderboard-head-icon {
+      width: 46px;
+      height: 46px;
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      border: 2px solid rgba(191, 119, 17, 0.34);
+      background:
+        radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 0.92), rgba(255, 249, 213, 0.84) 38%, rgba(255, 191, 88, 0.9) 64%, rgba(223, 138, 24, 0.96));
+      color: #7f4600;
+      font: 900 22px/1 var(--font);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.74),
+        0 12px 22px rgba(119, 59, 0, 0.18);
+    }
+
+    .leaderboard-head-icon.is-step {
+      border-color: rgba(119, 95, 201, 0.3);
+      background:
+        radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 0.94), rgba(255, 233, 247, 0.86) 34%, rgba(215, 191, 255, 0.92) 66%, rgba(139, 117, 246, 0.96));
+      color: #57329b;
+    }
+
+    .leaderboard-head-copy {
+      min-width: 0;
+      display: grid;
+      gap: 4px;
     }
 
     .leaderboard-title {
       margin: 0;
-      font-size: 14px;
-      line-height: 1.1;
+      font-size: 28px;
+      font-weight: 900;
+      line-height: 1.02;
+      color: #4c315f;
     }
 
     .leaderboard-count {
-      color: var(--muted);
-      font-size: 11px;
+      color: rgba(90, 66, 117, 0.74);
+      font-size: 13px;
+      font-weight: 800;
       white-space: nowrap;
+    }
+
+    .leaderboard-body {
+      position: relative;
+      z-index: 1;
+      min-height: 0;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      gap: 12px;
+      padding: 16px;
+      border: 1.5px solid rgba(188, 152, 224, 0.84);
+      border-radius: 28px;
+      background:
+        radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.34), transparent 42%),
+        linear-gradient(180deg, rgba(248, 243, 255, 0.98), rgba(239, 231, 252, 0.96));
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.8),
+        0 12px 28px rgba(78, 47, 110, 0.08);
+      overflow: hidden;
+    }
+
+    .leaderboard-shell.is-step-list .leaderboard-body {
+      grid-template-rows: minmax(0, 1fr);
     }
 
     .leaderboard-tabs {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 6px;
+      gap: 8px;
+      padding: 4px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.5);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.54);
     }
 
     .leaderboard-tab,
-    .leaderboard-close,
+    .leaderboard-dismiss,
     .leaderboard-row {
       font: inherit;
     }
 
     .leaderboard-tab {
-      height: 34px;
-      border: 1px solid rgba(236, 246, 255, 0.14);
+      height: 48px;
+      border: 1px solid rgba(255, 255, 255, 0.62);
       border-radius: 999px;
-      background: rgba(255, 255, 255, 0.06);
-      color: var(--muted);
+      background: rgba(255, 255, 255, 0.24);
+      color: rgba(72, 49, 96, 0.76);
+      font-size: 15px;
+      font-weight: 900;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.38);
       cursor: pointer;
     }
 
     .leaderboard-tab.is-active {
-      background: rgba(143, 245, 255, 0.18);
-      color: var(--ink);
-      border-color: rgba(143, 245, 255, 0.32);
-    }
-
-    .leaderboard-close {
-      width: 30px;
-      height: 30px;
-      border: 0;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.08);
-      color: var(--ink);
-      cursor: pointer;
+      background: linear-gradient(135deg, rgba(255, 223, 151, 0.94), rgba(255, 170, 227, 0.94));
+      color: #2a1739;
+      border-color: rgba(255, 255, 255, 0.76);
+      box-shadow:
+        0 10px 20px rgba(255, 150, 212, 0.18),
+        inset 0 1px 0 rgba(255, 255, 255, 0.58);
     }
 
     .leaderboard-list {
-      min-height: 90px;
       overflow: auto;
       display: grid;
       align-content: start;
-      gap: 6px;
-      padding-right: 2px;
+      gap: 10px;
+      padding-right: 4px;
       overscroll-behavior: contain;
+      min-height: 0;
     }
 
     .leaderboard-row {
       width: 100%;
-      min-height: 48px;
+      min-height: 66px;
       display: grid;
-      grid-template-columns: 30px 34px minmax(0, 1fr) auto;
+      grid-template-columns: 34px 40px minmax(0, 1fr) auto;
       align-items: center;
-      gap: 8px;
-      padding: 7px;
-      border: 1px solid rgba(236, 246, 255, 0.1);
-      border-radius: 14px;
-      background: rgba(255, 255, 255, 0.055);
-      color: var(--ink);
+      gap: 11px;
+      padding: 10px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.6);
+      border-radius: 20px;
+      background:
+        radial-gradient(circle at 18% 16%, rgba(255, 255, 255, 0.42), transparent 22%),
+        linear-gradient(135deg, rgba(255, 255, 255, 0.7), rgba(249, 243, 255, 0.88));
+      color: #231437;
       text-align: left;
+      box-shadow: 0 12px 24px rgba(38, 22, 67, 0.08);
       cursor: pointer;
     }
 
+    .leaderboard-row.is-self {
+      border-color: rgba(255, 202, 113, 0.98);
+      background:
+        radial-gradient(circle at 16% 18%, rgba(255, 255, 255, 0.82), transparent 28%),
+        linear-gradient(135deg, rgba(255, 238, 187, 0.94), rgba(255, 204, 239, 0.88), rgba(213, 251, 255, 0.84));
+      box-shadow:
+        0 12px 26px rgba(92, 48, 129, 0.13),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.52);
+    }
+
+    .leaderboard-row.is-self .leaderboard-rank,
+    .leaderboard-row.is-self .leaderboard-score {
+      color: #743d07;
+    }
+
+    .leaderboard-divider {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 10px;
+      padding: 2px 6px;
+      color: rgba(93, 66, 121, 0.62);
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .leaderboard-divider::before,
+    .leaderboard-divider::after {
+      content: "";
+      height: 1px;
+      background: rgba(93, 66, 121, 0.18);
+    }
+
     .leaderboard-rank {
-      color: rgba(245, 251, 255, 0.72);
-      font-size: 12px;
-      font-weight: 700;
+      color: rgba(78, 56, 103, 0.78);
+      font-size: 13px;
+      font-weight: 800;
       text-align: center;
     }
 
     .leaderboard-avatar {
-      width: 34px;
-      height: 34px;
+      width: 40px;
+      height: 40px;
       overflow: hidden;
       border-radius: 999px;
-      border: 1px solid rgba(245, 251, 255, 0.48);
-      background: rgba(143, 245, 255, 0.18);
+      border: 1px solid rgba(255, 255, 255, 0.72);
+      background: rgba(255, 184, 233, 0.18);
       display: grid;
       place-items: center;
       font-size: 13px;
@@ -789,20 +966,60 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
     }
 
     .leaderboard-name strong {
-      font-size: 12px;
+      font-size: 15px;
       line-height: 1.1;
     }
 
     .leaderboard-name small {
-      color: var(--muted);
-      font-size: 10px;
+      color: rgba(90, 66, 117, 0.74);
+      font-size: 11px;
+      font-weight: 800;
     }
 
     .leaderboard-score {
-      color: #fff4bd;
-      font-size: 12px;
-      font-weight: 700;
+      color: #8f4e0f;
+      font-size: 16px;
+      font-weight: 900;
       white-space: nowrap;
+    }
+
+    .leaderboard-footer {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      justify-content: center;
+      padding: 0 4px 2px;
+    }
+
+    .leaderboard-dismiss {
+      width: min(320px, 100%);
+      min-height: 54px;
+      border: 1px solid rgba(255, 255, 255, 0.68);
+      border-radius: 999px;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.78), transparent 26%),
+        linear-gradient(135deg, rgba(255, 221, 151, 0.96), rgba(255, 164, 224, 0.94));
+      color: #261536;
+      font-weight: 800;
+      font-size: 16px;
+      letter-spacing: 0.01em;
+      box-shadow: 0 14px 28px rgba(44, 23, 76, 0.12);
+      cursor: pointer;
+    }
+
+    .leaderboard-empty {
+      min-height: 138px;
+      display: grid;
+      place-items: center;
+      padding: 18px 14px;
+      border: 1px solid rgba(255, 255, 255, 0.56);
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.42);
+      color: rgba(86, 61, 112, 0.76);
+      font-size: 13px;
+      font-weight: 800;
+      text-align: center;
+      box-shadow: 0 8px 22px rgba(38, 22, 67, 0.08);
     }
 
     .mileage-login-button {
@@ -1074,11 +1291,41 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
         bottom: max(calc(var(--embed-bottom-offset) + 78px), calc(env(safe-area-inset-bottom) + var(--embed-bottom-offset) + 78px));
       }
 
-      .leaderboard-panel {
-        right: max(10px, calc(env(safe-area-inset-right) + 10px));
-        bottom: max(calc(var(--embed-bottom-offset) + 128px), calc(env(safe-area-inset-bottom) + var(--embed-bottom-offset) + 128px));
-        width: min(320px, calc(100vw - 20px));
-        max-height: min(480px, calc(100vh - 150px));
+      .leaderboard-shell {
+        width: min(100%, calc(100vw - 20px));
+        max-height: calc(100dvh - var(--embed-bottom-offset) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 300px);
+        margin-top: 0;
+        padding: 14px;
+        gap: 10px;
+        border-radius: 30px;
+      }
+
+      .leaderboard-shell.is-step-list {
+        width: min(100%, calc(100vw - 28px));
+        max-height: calc(100dvh - var(--embed-bottom-offset) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 330px);
+        margin-top: min(44px, 5dvh);
+      }
+
+      .leaderboard-head-icon {
+        width: 42px;
+        height: 42px;
+        font-size: 20px;
+      }
+
+      .leaderboard-title {
+        font-size: 23px;
+      }
+
+      .leaderboard-body {
+        padding: 12px;
+        border-radius: 23px;
+      }
+
+      .leaderboard-row {
+        min-height: 60px;
+        grid-template-columns: 32px 38px minmax(0, 1fr) auto;
+        gap: 8px;
+        padding: 10px;
       }
 
       .boost-button {
@@ -1101,11 +1348,12 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
     }
   </style>
 </head>
-<body>
+<body class="<?php echo $previewMode ? 'is-preview-mode' : ''; ?>">
   <div id="viewer" class="viewer">
     <div id="scene" class="scene" aria-label="Mileage board viewer">
       <div id="boardShell" class="board-shell is-hidden" aria-label="Mileage board">
         <div id="boardTrack" class="board-track"></div>
+        <canvas id="boardCanvas" class="board-canvas" aria-hidden="true"></canvas>
         <div class="board-overlay" aria-hidden="true">
           <div id="stepLayer" class="overlay-layer"></div>
           <div id="rewardLayer" class="overlay-layer"></div>
@@ -1147,22 +1395,47 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
     </button>
 
     <section id="leaderboardPanel" class="leaderboard-panel is-hidden" aria-hidden="true">
-      <div class="leaderboard-head">
-        <div>
-          <h2 id="leaderboardTitle" class="leaderboard-title">Leaderboard</h2>
-          <div id="leaderboardCount" class="leaderboard-count">0 คน</div>
+      <div class="leaderboard-shell" role="dialog" aria-modal="true" aria-labelledby="leaderboardTitle">
+        <div class="leaderboard-head">
+          <span class="leaderboard-head-icon" aria-hidden="true">P</span>
+          <div class="leaderboard-head-copy">
+            <h2 id="leaderboardTitle" class="leaderboard-title">Leaderboard</h2>
+            <div id="leaderboardCount" class="leaderboard-count">0 คน</div>
+          </div>
         </div>
-        <button id="leaderboardClose" class="leaderboard-close" type="button" aria-label="ปิด">×</button>
+        <div class="leaderboard-body">
+          <div class="leaderboard-tabs" role="tablist" aria-label="เลือกอันดับ mileage">
+            <button class="leaderboard-tab is-active" type="button" data-rank-tab="all">ทั้งหมด</button>
+            <button class="leaderboard-tab" type="button" data-rank-tab="weekly">สัปดาห์</button>
+          </div>
+          <div id="leaderboardList" class="leaderboard-list"></div>
+        </div>
+        <div class="leaderboard-footer">
+          <button id="leaderboardClose" class="leaderboard-dismiss" type="button" aria-label="ปิด">ปิด</button>
+        </div>
       </div>
-      <div class="leaderboard-tabs" role="tablist" aria-label="เลือกอันดับ mileage">
-        <button class="leaderboard-tab is-active" type="button" data-rank-tab="all">ทั้งหมด</button>
-        <button class="leaderboard-tab" type="button" data-rank-tab="weekly">สัปดาห์</button>
-      </div>
-      <div id="leaderboardList" class="leaderboard-list"></div>
     </section>
 
-    <button id="boostButton" class="boost-button is-hidden" type="button" aria-label="เร่งความเร็วแอนิเมชัน">
-      เร่งให้จบ
+    <section id="stepPlayersPanel" class="leaderboard-panel is-hidden" aria-hidden="true">
+      <div class="leaderboard-shell is-step-list" role="dialog" aria-modal="true" aria-labelledby="stepPlayersTitle">
+        <div class="leaderboard-head">
+          <span class="leaderboard-head-icon is-step" aria-hidden="true">#</span>
+          <div class="leaderboard-head-copy">
+            <h2 id="stepPlayersTitle" class="leaderboard-title">ผู้เล่นในช่อง</h2>
+            <div id="stepPlayersCount" class="leaderboard-count">0 คน</div>
+          </div>
+        </div>
+        <div class="leaderboard-body">
+          <div id="stepPlayersList" class="leaderboard-list"></div>
+        </div>
+        <div class="leaderboard-footer">
+          <button id="stepPlayersClose" class="leaderboard-dismiss" type="button" aria-label="ปิด">ปิด</button>
+        </div>
+      </div>
+    </section>
+
+    <button id="boostButton" class="boost-button is-hidden" type="button" aria-label="กดค้างเพื่อเร่งความเร็วแอนิเมชัน">
+      &gt;&gt;
     </button>
 
     <button id="walkActionButton" class="walk-action is-hidden" type="button" aria-label="เริ่มเดิน Mileage">
@@ -1185,13 +1458,20 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
   </div>
 
   <script>
+    window.ASSET_MANIFEST_RUNTIME_BOOT = { apiUrl: "asset-manifest-api.php" };
+  </script>
+  <script src="assets/js/asset-manifest-runtime.js?v=<?php echo htmlspecialchars($assetManifestRuntimeVersion, ENT_QUOTES, 'UTF-8'); ?>"></script>
+  <script>
     const initialBoardCode = <?php echo json_encode($boardCode, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
     const initialPlayerToken = <?php echo json_encode($playerToken, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+    const initialPreviewMode = <?php echo $previewMode ? 'true' : 'false'; ?>;
 
     const viewer = document.getElementById("viewer");
     const scene = document.getElementById("scene");
     const boardShell = document.getElementById("boardShell");
     const boardTrack = document.getElementById("boardTrack");
+    const boardCanvas = document.getElementById("boardCanvas");
+    const boardCtx = boardCanvas.getContext("2d");
     const stepLayer = document.getElementById("stepLayer");
     const rewardLayer = document.getElementById("rewardLayer");
     const spriteLayer = document.getElementById("spriteLayer");
@@ -1210,6 +1490,11 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
     const leaderboardCount = document.getElementById("leaderboardCount");
     const leaderboardList = document.getElementById("leaderboardList");
     const leaderboardClose = document.getElementById("leaderboardClose");
+    const stepPlayersPanel = document.getElementById("stepPlayersPanel");
+    const stepPlayersTitle = document.getElementById("stepPlayersTitle");
+    const stepPlayersCount = document.getElementById("stepPlayersCount");
+    const stepPlayersList = document.getElementById("stepPlayersList");
+    const stepPlayersClose = document.getElementById("stepPlayersClose");
     const mileageLoginButton = document.getElementById("mileageLoginButton");
     const boostButton = document.getElementById("boostButton");
     const walkActionButton = document.getElementById("walkActionButton");
@@ -1221,12 +1506,12 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
     const apiUrl = new URL("mileage-api.php", window.location.href);
     const markerStyle = {
       rewardSize: 44,
-      otherSize: 34,
-      selfSize: 46,
-      otherLift: 28,
+      otherSize: 30,
+      selfSize: 52,
+      otherLift: 10,
       selfLift: 35,
-      clusterOffset: 24,
-      clusterLift: 19,
+      clusterOffset: 18,
+      clusterLift: 22,
       stepBadgeSize: 24,
       stepBadgeOffset: 18
     };
@@ -1236,11 +1521,74 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
       ticket: "images/icon_ticket.png",
       potion: "images/icon_gelato.png"
     };
+    const boardDecorBlueprints = {
+      main: [
+        {
+          id: "spaceRocket",
+          assetSrc: "images/pic_element_mileage_1.png",
+          rect: {
+            x: 609,
+            y: 2436,
+            width: 165,
+            height: 328
+          },
+          parallax: {
+            factorX: 0.0075,
+            factorY: 0.0105,
+            maxX: 8,
+            maxY: 18
+          },
+          idle: {
+            restLift: 14,
+            swayX: 1.8,
+            bobY: 5.8,
+            swayMs: 5200,
+            bobMs: 3600,
+            phase: 0.18
+          }
+        }
+      ]
+    };
+
+    function debugFlag(value, fallback = false) {
+      if (value === null) return fallback;
+      const normalized = String(value).trim().toLowerCase();
+      if (normalized === "") return fallback;
+      return ["1", "true", "yes", "on"].includes(normalized);
+    }
+
+    function debugNumber(value, fallback, min = -Infinity, max = Infinity) {
+      const parsed = Number(value);
+      if (!Number.isFinite(parsed)) return fallback;
+      return clamp(parsed, min, max);
+    }
+
+    function readDebugConfig() {
+      const params = new URLSearchParams(window.location.search);
+      return {
+        enabled: Array.from(params.keys()).some((key) => /^debug_/i.test(key)),
+        walk: debugFlag(params.get("debug_walk")),
+        start: Math.trunc(debugNumber(params.get("debug_start"), -1, -1, 100000)),
+        steps: Math.trunc(debugNumber(params.get("debug_steps"), 8, 0, 100000)),
+        friends: Math.trunc(debugNumber(params.get("debug_friends"), 0, 0, 300)),
+        cityZone: String(params.get("debug_city_zone") || "").trim().toLowerCase(),
+        autoplay: debugFlag(params.get("debug_autoplay"), false),
+      };
+    }
+
+	    const debugConfig = readDebugConfig();
+	    const DEFAULT_UPLOADED_SPRITE_EDGE_FADE = 3;
 
     const state = {
       bootstrap: null,
       board: null,
       boardReady: false,
+      preview: {
+        enabled: initialPreviewMode,
+        simulation: {},
+        bootstrapped: false
+      },
+      debug: debugConfig,
       camera: {
         x: 0,
         y: 0,
@@ -1283,10 +1631,17 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
         velocityX: 0,
         velocityY: 0,
         assistStrength: 0,
-        pathLock: false
+        pathLock: false,
+        manualOverrideUntil: 0
       },
       leaderboardTab: "all",
       leaderboardOpen: false,
+      stepPlayersPanel: {
+        open: false,
+        stepIndex: -1,
+        loading: false,
+        players: []
+      },
       walk: {
         active: false,
         startAt: 0,
@@ -1301,15 +1656,67 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
         visualScaleX: 1,
         visualScaleY: 1,
         visualTiltDeg: 0,
+        visualOffsetX: 0,
+        visualOffsetY: 0,
         boost: false,
         pendingClaim: false,
         restoreScale: 1
+      },
+      selfFx: {
+        particles: [],
+        activeStepGlow: null,
+        landingPulse: null,
+        lastPoint: null,
+        lastUpdateAt: 0,
+        lastEmitAt: 0,
+        velocityX: 0,
+        velocityY: 0,
+        seed: 0
+      },
+      ambience: {
+        seed: 914271,
+        cloudSeed: 37511,
+        lastCameraX: 0,
+        lastCameraY: 0,
+        lastCameraAt: 0,
+        cameraVelocityX: 0,
+        cameraVelocityY: 0
+      },
+      boardDecor: {
+        layers: [],
+        preparedKey: ""
       },
       claimedRewardIds: new Set(),
       recentClaimedRewardIds: new Set(),
       recentClaimRewardTimer: 0,
       toastTimer: 0,
-      animationFrame: 0
+      animationFrame: 0,
+      time: {
+        pauseStartedAt: 0,
+        pausedDuration: 0
+      },
+      renderIndex: {
+        stepGroupsBySegment: new Map(),
+        rewardsBySegment: new Map(),
+        spritesBySegment: new Map(),
+        rewardStepIndexes: new Set()
+      },
+	      canvas: {
+	        imageCache: new Map(),
+	        softSpriteCache: new Map(),
+	        dpr: 1,
+        viewportWidth: 0,
+        viewportHeight: 0,
+        lastVisibleRect: null,
+        playerClusterTargets: [],
+        lastVisibleCounts: {
+          segments: 0,
+          steps: 0,
+          rewards: 0,
+          sprites: 0,
+          players: 0
+        }
+      }
     };
 
     if (window.parent && window.parent !== window) {
@@ -1333,12 +1740,25 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
       return Math.max(min, Math.min(max, value));
     }
 
-    function plainObject(value) {
-      return value && typeof value === "object" && !Array.isArray(value);
-    }
+	    function plainObject(value) {
+	      return value && typeof value === "object" && !Array.isArray(value);
+	    }
+
+	    function isUploadedSpritePath(path) {
+	      const value = String(path || "").trim().toLowerCase();
+	      return value.startsWith("uploads/") || value.startsWith("images/uploads/");
+	    }
 
     function lerp(start, end, t) {
       return start + (end - start) * t;
+    }
+
+    function cloneJson(value) {
+      return JSON.parse(JSON.stringify(value));
+    }
+
+    function animationNow() {
+      return performance.now() - state.time.pausedDuration;
     }
 
     function boardUiSettings() {
@@ -1372,6 +1792,46 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
       return 1 - Math.pow(1 - x, 3);
     }
 
+    function easeOutQuart(t) {
+      const x = clamp(t, 0, 1);
+      return 1 - Math.pow(1 - x, 4);
+    }
+
+    function easeInOutSine(t) {
+      const x = clamp(t, 0, 1);
+      return -(Math.cos(Math.PI * x) - 1) / 2;
+    }
+
+    function seededNoise() {
+      state.selfFx.seed = (state.selfFx.seed + 0x6D2B79F5) >>> 0;
+      let t = state.selfFx.seed;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    }
+
+    function hashNoise(seed) {
+      let t = (Number(seed) || 0) >>> 0;
+      t += 0x6D2B79F5;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    }
+
+    function selfParticleToneColor(tone, kind = "trail") {
+      const value = clamp(Number(tone || 0), 0, 1);
+      if (kind === "burst") {
+        if (value < 0.24) return "255, 222, 132";
+        if (value < 0.46) return "126, 236, 255";
+        if (value < 0.64) return "255, 146, 222";
+        if (value < 0.82) return "154, 255, 207";
+        return "194, 150, 255";
+      }
+      if (value < 0.36) return "255, 205, 116";
+      if (value < 0.68) return "126, 236, 255";
+      return "255, 132, 223";
+    }
+
     function isTouchLikePointer(event) {
       const pointerType = String(event?.pointerType || "");
       return pointerType === "touch" || pointerType === "pen";
@@ -1389,6 +1849,11 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
 
     function syncLoginButton(visible) {
       if (!mileageLoginButton) return;
+      if (state.preview.enabled) {
+        mileageLoginButton.classList.add("is-hidden");
+        mileageLoginButton.setAttribute("aria-hidden", "true");
+        return;
+      }
       const loginUrl = new URL("./api/auth/bridge.php", window.location.href);
       loginUrl.searchParams.set("flow", "gacha");
       loginUrl.searchParams.set("return_to", window.location.href);
@@ -1418,6 +1883,17 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
     }
 
     async function fetchMileageJson(action, body = null) {
+      if (state.preview.enabled) {
+        if (action === "bootstrap") {
+          action = "preview_bootstrap";
+        } else if (action === "claim_pending") {
+          return simulatedPreviewClaim();
+        } else if (action === "leaderboard") {
+          return { ok: true, leaderboard: { all: [], weekly: [] } };
+        } else if (action === "step_players") {
+          return { ok: true, players: previewPlayersForStep(Number(body?.stepIndex ?? -1)) };
+        }
+      }
       const url = new URL(apiUrl.toString());
       url.searchParams.set("action", action);
       url.searchParams.set("boardCode", initialBoardCode);
@@ -1458,9 +1934,55 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
       }
       const source = String(state.board?.image?.source || "").trim();
       if (source) {
-        return [{ src: source, y: 0, h: state.board?.image?.height || 0 }];
+        return [{
+          id: "segment_001",
+          src: source,
+          y: 0,
+          h: state.board?.image?.height || 0
+        }];
       }
       return [];
+    }
+
+    function activeBoardDecorBlueprints() {
+      const boardCode = String(state.board?.boardCode || initialBoardCode || "").trim().toLowerCase();
+      if (state.boardDecor.preparedKey !== boardCode) {
+        state.boardDecor.preparedKey = boardCode;
+        state.boardDecor.layers = Array.isArray(boardDecorBlueprints[boardCode]) ? boardDecorBlueprints[boardCode] : [];
+      }
+      return Array.isArray(state.boardDecor.layers) ? state.boardDecor.layers : [];
+    }
+
+    // MILEAGE_SEGMENT_MODEL_V2: board positions resolve from segment-local points first,
+    // then expose derived global x/y for rendering compatibility.
+    function boardSegmentById(segmentId) {
+      const normalized = String(segmentId || "").trim();
+      return boardSegments().find((segment) => String(segment?.id || "") === normalized) || boardSegments()[0] || null;
+    }
+
+    function boardPointFromLocation(location) {
+      if (!state.board || !location) return null;
+      const size = boardSize();
+      if (
+        typeof location.localX === "number"
+        && typeof location.localY === "number"
+        && location.segmentId
+      ) {
+        const segment = boardSegmentById(location.segmentId);
+        if (segment) {
+          return {
+            x: clamp(location.localX, 0, 1) * size.width,
+            y: Number(segment.y || 0) + (clamp(location.localY, 0, 1) * Math.max(1, Number(segment.h || 1)))
+          };
+        }
+      }
+      if (typeof location.x === "number" && typeof location.y === "number") {
+        return {
+          x: clamp(location.x, 0, 1) * size.width,
+          y: clamp(location.y, 0, 1) * size.height
+        };
+      }
+      return null;
     }
 
     function boardStep(index) {
@@ -1469,25 +1991,13 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
     }
 
     function boardPointFromStep(index) {
-      const step = boardStep(index);
-      if (!step || !state.board) return null;
-      const size = boardSize();
-      return {
-        x: step.x * size.width,
-        y: step.y * size.height
-      };
+      return boardPointFromLocation(boardStep(index));
     }
 
     function boardEntryPoint() {
       if (!state.board) return null;
       const entry = state.board.entry || state.board.steps?.[0] || null;
-      const normalizedX = typeof entry?.x === "number" ? entry.x : 0.4123;
-      const normalizedY = typeof entry?.y === "number" ? entry.y : 0.9721;
-      const size = boardSize();
-      return {
-        x: normalizedX * size.width,
-        y: normalizedY * size.height
-      };
+      return boardPointFromLocation(entry) || boardPointFromLocation({ x: 0.4123, y: 0.9721 });
     }
 
     function pointForPlayer(player) {
@@ -1500,13 +2010,8 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
 
     function rewardPoint(reward) {
       if (!state.board || !reward) return null;
-      const size = boardSize();
-      if (typeof reward.x === "number" && typeof reward.y === "number") {
-        return {
-          x: reward.x * size.width,
-          y: reward.y * size.height
-        };
-      }
+      const directPoint = boardPointFromLocation(reward);
+      if (directPoint) return directPoint;
       if (Number.isInteger(reward.stepIndex)) {
         return boardPointFromStep(reward.stepIndex);
       }
@@ -1514,13 +2019,24 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
     }
 
     function spritePoint(sprite) {
-      if (!state.board || !sprite || typeof sprite.x !== "number" || typeof sprite.y !== "number") {
-        return null;
-      }
-      const size = boardSize();
+      return boardPointFromLocation(sprite);
+    }
+
+    function iconTemplateById(id) {
+      const target = String(id || "").trim();
+      if (target === "") return null;
+      return (Array.isArray(state.board?.iconTemplates) ? state.board.iconTemplates : [])
+        .find((template) => String(template?.id || "") === target) || null;
+    }
+
+    function rewardNodeDrawable(node) {
+      const meta = node && typeof node.meta === "object" && !Array.isArray(node.meta) ? node.meta : {};
       return {
-        x: sprite.x * size.width,
-        y: sprite.y * size.height
+        ...node,
+        kind: String(node?.kind || meta.kind || "coin"),
+        amount: Math.max(1, Number(node?.amount || meta.amount || 1)),
+        itemCode: String(node?.itemCode || meta.itemCode || ""),
+        __rewardNode: true
       };
     }
 
@@ -1530,14 +2046,7 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
       const maxIndex = state.board.steps.length - 1;
       const clampedValue = clamp(stepValue, -1, maxIndex);
       if (clampedValue < 0) {
-        const entryPoint = boardEntryPoint();
-        const firstPoint = boardPointFromStep(0) || entryPoint;
-        if (!entryPoint || !firstPoint) return null;
-        const t = clampedValue + 1;
-        return {
-          x: lerp(entryPoint.x, firstPoint.x, t),
-          y: lerp(entryPoint.y, firstPoint.y, t)
-        };
+        return boardPointFromStep(0) || boardEntryPoint();
       }
       const low = Math.floor(clampedValue);
       const high = Math.min(maxIndex, Math.ceil(clampedValue));
@@ -1556,6 +2065,11 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
         return pathPointForValue(state.walk.currentValue) || boardEntryPoint();
       }
       const summary = state.bootstrap?.summary || {};
+      const pendingSteps = Number(summary.pendingSteps || 0);
+      if (pendingSteps > 0) {
+        const lastAnimatedValue = Number(summary.lastAnimatedStep ?? -1);
+        return pathPointForValue(Number.isFinite(lastAnimatedValue) ? lastAnimatedValue : 0) || boardPointFromStep(0) || boardEntryPoint();
+      }
       const focusValue = typeof summary.positionStep === "number" ? summary.positionStep : -1;
       return focusValue >= 0
         ? pathPointForValue(focusValue)
@@ -1573,6 +2087,14 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
       };
     }
 
+    function scenePointFromBoardPoint(point) {
+      if (!point) return null;
+      return {
+        x: state.camera.x + point.x * state.camera.scale,
+        y: state.camera.y + point.y * state.camera.scale
+      };
+    }
+
     function viewportPointToBoard(clientX, clientY) {
       const rect = sceneRect();
       return {
@@ -1587,6 +2109,38 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
         x: rect.width / 2,
         y: rect.height / 2
       };
+    }
+
+    // MILEAGE_VIEWPORT_CANVAS: every frame queries only the board rect visible in the viewport.
+    function visibleBoardRect(paddingPx = 0) {
+      const rect = sceneRect();
+      const scale = Math.max(0.0001, state.camera.scale || 1);
+      const paddingBoard = paddingPx / scale;
+      return {
+        left: ((0 - state.camera.x) / scale) - paddingBoard,
+        top: ((0 - state.camera.y) / scale) - paddingBoard,
+        right: ((rect.width - state.camera.x) / scale) + paddingBoard,
+        bottom: ((rect.height - state.camera.y) / scale) + paddingBoard,
+      };
+    }
+
+    function isBoardPointVisible(point, paddingPx = 0) {
+      if (!point) return false;
+      const rect = visibleBoardRect(paddingPx);
+      return point.x >= rect.left && point.x <= rect.right && point.y >= rect.top && point.y <= rect.bottom;
+    }
+
+    function segmentVisible(segment, rect) {
+      if (!segment || !rect) return false;
+      const top = Number(segment.y || 0);
+      const bottom = top + Math.max(1, Number(segment.h || 1));
+      return bottom >= rect.top && top <= rect.bottom;
+    }
+
+    function visibleSegmentIds(rect = visibleBoardRect(0)) {
+      return boardSegments()
+        .filter((segment) => segmentVisible(segment, rect))
+        .map((segment) => String(segment.id || ""));
     }
 
     function computeScales() {
@@ -1628,18 +2182,11 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
 
     function applyCamera() {
       clampCamera();
-      boardShell.style.transform = `translate3d(${state.camera.x}px, ${state.camera.y}px, 0) scale(${state.camera.scale})`;
       updateZoomSlider();
     }
 
     function isPathScrollAssistAvailable() {
-      return Boolean(
-        state.board
-        && Array.isArray(state.board.steps)
-        && state.board.steps.length > 0
-        && !state.walk.active
-        && state.camera.scale > (state.camera.minScale + 0.04)
-      );
+      return false;
     }
 
     function projectPointOnSegment(target, start, end) {
@@ -1705,27 +2252,11 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
     }
 
     function pathAssistStrengthFromTravel(horizontalDelta, verticalDelta, options = {}) {
-      const absX = Math.abs(Number(horizontalDelta) || 0);
-      const absY = Math.abs(Number(verticalDelta) || 0);
-      const touchBoost = Boolean(options.touchBoost);
-      if (absY < (touchBoost ? 6 : 10)) return 0;
-      const share = absY / Math.max(1, absX + absY);
-      const minimumShare = touchBoost ? 0.58 : 0.66;
-      if (share < minimumShare) return 0;
-      const speed = Math.hypot(absX, absY);
-      const dominance = clamp((share - minimumShare) / (1 - minimumShare), 0, 1);
-      const damping = touchBoost
-        ? 1 - clamp((speed - 58) / 360, 0, 0.46)
-        : 1 - clamp((speed - 42) / 280, 0, 0.72);
-      return dominance * (touchBoost ? 0.68 : 0.28) * damping;
+      return 0;
     }
 
     function shouldTouchPathLock(horizontalDelta, verticalDelta) {
-      const absX = Math.abs(Number(horizontalDelta) || 0);
-      const absY = Math.abs(Number(verticalDelta) || 0);
-      if (absY < 18) return false;
-      const share = absY / Math.max(1, absX + absY);
-      return share >= 0.74;
+      return false;
     }
 
     function applyPathScrollAssist(options = {}) {
@@ -1826,7 +2357,7 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
       stopCameraMotion();
       state.cameraTween = {
         active: true,
-        startAt: performance.now(),
+        startAt: animationNow(),
         duration: Math.max(180, Number(options.duration || 620)),
         fromX: state.camera.x,
         fromY: state.camera.y,
@@ -1876,13 +2407,10 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
       state.camera.scale = target.scale;
       state.camera.x = target.x;
       state.camera.y = target.y;
+      applyCamera();
       if (immediate) {
-        applyCamera();
-        return;
+        renderBoardCanvas();
       }
-      clampCamera();
-      boardShell.style.transform = `translate3d(${state.camera.x}px, ${state.camera.y}px, 0) scale(${state.camera.scale})`;
-      updateZoomSlider();
     }
 
     function nudgeCameraToPoint(point, options = {}) {
@@ -1939,6 +2467,27 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
         return;
       }
       setCameraToPoint(point, options);
+    }
+
+    function updateWalkCameraFollow(ts = animationNow()) {
+      if (!state.walk.active) return;
+      if (state.gesture.pointers.size > 0) return;
+      if (state.leaderboardOpen || state.stepPlayersPanel.open) return;
+      if (ts < Number(state.gesture.manualOverrideUntil || 0)) return;
+      const point = currentSelfPoint();
+      if (!point) return;
+      const targetScale = clamp(
+        Math.max(state.camera.scale, state.camera.walkScale),
+        state.camera.minScale,
+        state.camera.maxScale
+      );
+      if (!state.cameraTween.active && state.camera.scale < targetScale - 0.01) {
+        setCameraScale(lerp(state.camera.scale, targetScale, 0.08), viewportCenter());
+      }
+      nudgeCameraToPoint(point, {
+        alignY: state.camera.scale <= (state.camera.minScale + 0.04) ? 0.58 : 0.66,
+        followStrength: state.walk.boost ? 0.24 : 0.17
+      });
     }
 
     function updateZoomSlider() {
@@ -2199,6 +2748,25 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
       }, "*");
     }
 
+    function mileageOverlayOpen() {
+      return Boolean(state.leaderboardOpen || state.stepPlayersPanel.open);
+    }
+
+    function syncMileageOverlayChrome() {
+      viewer?.classList.toggle("has-overlay-open", mileageOverlayOpen());
+    }
+
+    function postMileageUiStateToParent(options = {}) {
+      syncMileageOverlayChrome();
+      if (!window.parent || window.parent === window) return;
+      window.parent.postMessage({
+        type: "gacha-mileage-ui-state",
+        overlayOpen: mileageOverlayOpen(),
+        clearFrameFade: true,
+        ...options
+      }, "*");
+    }
+
     function rewardGlyph(kind) {
       return {
         coin: "C",
@@ -2226,6 +2794,11 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
         return `<span><img src="${escapeHtml(iconSrc)}" alt="" loading="lazy" decoding="async" /></span>`;
       }
       return `<span>${escapeHtml(rewardGlyph(kind))}</span>`;
+    }
+
+    function stepDisplayNumber(index) {
+      const value = Number(index);
+      return Number.isFinite(value) ? String(Math.max(0, Math.trunc(value))) : "0";
     }
 
     function stepBadgeOffset(point, index) {
@@ -2275,70 +2848,1617 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
       return "";
     }
 
-    function renderBoardTrack() {
-      const segments = boardSegments();
-      const size = boardSize();
-      boardShell.style.setProperty("--board-width", `${size.width}px`);
-      boardShell.style.setProperty("--board-height", `${size.height}px`);
-      boardTrack.innerHTML = segments
-        .map((segment) => {
-          const y = Number(segment.y || 0);
-          const h = Number(segment.h || 0);
-          const style = h > 0
-            ? `top:${y}px; height:${h}px; object-fit:cover;`
-            : `top:${y}px;`;
-          return `<img src="${escapeHtml(segment.src || "")}" alt="" loading="eager" decoding="async" style="${style}" />`;
-        })
-        .join("");
-      boardShell.classList.toggle("is-hidden", segments.length === 0);
+    async function resolveManagedMileageAsset(src) {
+      const runtime = window.AssetManifestRuntime;
+      if (!runtime?.resolveAsset) {
+        return { url: src };
+      }
+      try {
+        return await runtime.resolveAsset("mileage-runtime", src, {});
+      } catch (_error) {
+        return { url: src };
+      }
     }
 
-    function waitForBoardImagesReady() {
-      const images = Array.from(boardTrack.querySelectorAll("img"));
-      if (images.length === 0) {
+    async function listManagedMileagePreloads() {
+      const runtime = window.AssetManifestRuntime;
+      if (!runtime?.listPageAssets) {
+        return [];
+      }
+      try {
+        return await runtime.listPageAssets("mileage-runtime", { preloadOnly: true });
+      } catch (_error) {
+        return [];
+      }
+    }
+
+	    function cacheCanvasImage(src) {
+      const key = String(src || "").trim();
+      if (key === "") return null;
+      if (state.canvas.imageCache.has(key)) {
+        return state.canvas.imageCache.get(key);
+	      }
+	      const image = new Image();
+	      image.decoding = "async";
+	      image.__dekpokeCacheToken = `img${state.canvas.imageCache.size + 1}`;
+	      const entry = {
+        status: "loading",
+        image,
+        promise: null,
+        resolvedUrl: ""
+      };
+      entry.promise = new Promise((resolve) => {
+        image.addEventListener("load", () => {
+          entry.status = "loaded";
+          if (state.boardReady) {
+            renderBoardCanvas();
+          }
+          resolve(image);
+        }, { once: true });
+        image.addEventListener("error", () => {
+          entry.status = "error";
+          resolve(null);
+        }, { once: true });
+      });
+      Promise.resolve()
+        .then(() => resolveManagedMileageAsset(key))
+        .then((managed) => {
+          entry.resolvedUrl = String(managed?.url || key);
+          image.src = entry.resolvedUrl;
+        })
+        .catch(() => {
+          entry.resolvedUrl = key;
+          image.src = key;
+        });
+      state.canvas.imageCache.set(key, entry);
+      return entry;
+    }
+
+	    function canvasImageOrNull(src) {
+	      const entry = cacheCanvasImage(src);
+	      return entry?.status === "loaded" ? entry.image : null;
+	    }
+
+	    function spriteEdgeFadePx(sprite, width, height) {
+	      const meta = plainObject(sprite?.meta) ? sprite.meta : null;
+	      const fallback = isUploadedSpritePath(sprite?.src) ? DEFAULT_UPLOADED_SPRITE_EDGE_FADE : 0;
+	      const parsed = Number(meta?.edgeFade ?? sprite?.edgeFade ?? fallback);
+	      const fade = clamp(Number.isFinite(parsed) ? parsed : fallback, 0, 64);
+	      const maxFade = Math.max(0, Math.floor(Math.min(Math.max(1, width || 1), Math.max(1, height || 1)) / 2) - 1);
+	      return Math.min(Math.round(fade), maxFade);
+	    }
+
+	    function drawEdgeFadeMask(ctx, width, height, fadePx) {
+	      ctx.clearRect(0, 0, width, height);
+	      ctx.fillStyle = "#000";
+	      if (fadePx <= 0) {
+	        ctx.fillRect(0, 0, width, height);
+	        return;
+	      }
+
+	      const innerWidth = Math.max(0, width - (fadePx * 2));
+	      const innerHeight = Math.max(0, height - (fadePx * 2));
+	      if (innerWidth > 0 && innerHeight > 0) {
+	        ctx.fillRect(fadePx, fadePx, innerWidth, innerHeight);
+	      }
+
+	      if (innerWidth > 0) {
+	        let gradient = ctx.createLinearGradient(0, 0, 0, fadePx);
+	        gradient.addColorStop(0, "rgba(0,0,0,0)");
+	        gradient.addColorStop(1, "rgba(0,0,0,1)");
+	        ctx.fillStyle = gradient;
+	        ctx.fillRect(fadePx, 0, innerWidth, fadePx);
+
+	        gradient = ctx.createLinearGradient(0, height, 0, height - fadePx);
+	        gradient.addColorStop(0, "rgba(0,0,0,0)");
+	        gradient.addColorStop(1, "rgba(0,0,0,1)");
+	        ctx.fillStyle = gradient;
+	        ctx.fillRect(fadePx, height - fadePx, innerWidth, fadePx);
+	      }
+
+	      if (innerHeight > 0) {
+	        let gradient = ctx.createLinearGradient(0, 0, fadePx, 0);
+	        gradient.addColorStop(0, "rgba(0,0,0,0)");
+	        gradient.addColorStop(1, "rgba(0,0,0,1)");
+	        ctx.fillStyle = gradient;
+	        ctx.fillRect(0, fadePx, fadePx, innerHeight);
+
+	        gradient = ctx.createLinearGradient(width, 0, width - fadePx, 0);
+	        gradient.addColorStop(0, "rgba(0,0,0,0)");
+	        gradient.addColorStop(1, "rgba(0,0,0,1)");
+	        ctx.fillStyle = gradient;
+	        ctx.fillRect(width - fadePx, fadePx, fadePx, innerHeight);
+	      }
+
+	      [
+	        { cx: fadePx, cy: fadePx, x: 0, y: 0 },
+	        { cx: width - fadePx, cy: fadePx, x: width - fadePx, y: 0 },
+	        { cx: fadePx, cy: height - fadePx, x: 0, y: height - fadePx },
+	        { cx: width - fadePx, cy: height - fadePx, x: width - fadePx, y: height - fadePx }
+	      ].forEach((corner) => {
+	        const gradient = ctx.createRadialGradient(corner.cx, corner.cy, 0, corner.cx, corner.cy, fadePx);
+	        gradient.addColorStop(0, "rgba(0,0,0,1)");
+	        gradient.addColorStop(1, "rgba(0,0,0,0)");
+	        ctx.fillStyle = gradient;
+	        ctx.fillRect(corner.x, corner.y, fadePx, fadePx);
+	      });
+	    }
+
+	    function softSpriteFrame(image, box, width, height, fadePx) {
+	      const roundedWidth = Math.max(1, Math.round(width));
+	      const roundedHeight = Math.max(1, Math.round(height));
+	      const key = [
+	        image.__dekpokeCacheToken || "img",
+	        box.sx,
+	        box.sy,
+	        box.sw,
+	        box.sh,
+	        roundedWidth,
+	        roundedHeight,
+	        fadePx
+	      ].join(":");
+	      const cached = state.canvas.softSpriteCache.get(key);
+	      if (cached) return cached;
+
+	      const canvas = document.createElement("canvas");
+	      canvas.width = roundedWidth;
+	      canvas.height = roundedHeight;
+	      const drawCtx = canvas.getContext("2d");
+	      drawCtx.clearRect(0, 0, roundedWidth, roundedHeight);
+	      drawCtx.drawImage(image, box.sx, box.sy, box.sw, box.sh, 0, 0, roundedWidth, roundedHeight);
+
+	      const maskCanvas = document.createElement("canvas");
+	      maskCanvas.width = roundedWidth;
+	      maskCanvas.height = roundedHeight;
+	      const maskCtx = maskCanvas.getContext("2d");
+	      drawEdgeFadeMask(maskCtx, roundedWidth, roundedHeight, fadePx);
+
+	      drawCtx.globalCompositeOperation = "destination-in";
+	      drawCtx.drawImage(maskCanvas, 0, 0);
+	      drawCtx.globalCompositeOperation = "source-over";
+
+	      if (state.canvas.softSpriteCache.size > 320) {
+	        state.canvas.softSpriteCache.clear();
+	      }
+	      state.canvas.softSpriteCache.set(key, canvas);
+	      return canvas;
+	    }
+
+    function syncBoardCanvasSize() {
+      const rect = sceneRect();
+      const dpr = clamp(window.devicePixelRatio || 1, 1, 1.5);
+      const width = Math.max(1, Math.ceil(rect.width * dpr));
+      const height = Math.max(1, Math.ceil(rect.height * dpr));
+      if (boardCanvas.width !== width || boardCanvas.height !== height) {
+        boardCanvas.width = width;
+        boardCanvas.height = height;
+      }
+      state.canvas.dpr = dpr;
+      state.canvas.viewportWidth = width / dpr;
+      state.canvas.viewportHeight = height / dpr;
+    }
+
+    function traceRoundedRect(ctx, x, y, width, height, radius) {
+      const r = Math.min(radius, width / 2, height / 2);
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + width, y, x + width, y + height, r);
+      ctx.arcTo(x + width, y + height, x, y + height, r);
+      ctx.arcTo(x, y + height, x, y, r);
+      ctx.arcTo(x, y, x + width, y, r);
+      ctx.closePath();
+    }
+
+    function drawAvatarDisk(ctx, player, size, options = {}) {
+      const radius = size / 2;
+      const innerRadius = Math.max(6, radius - (options.borderWidth || 2));
+      const avatarUrl = String(player?.avatarUrl || "").trim();
+      ctx.save();
+      ctx.shadowColor = options.shadowColor || "rgba(0, 0, 0, 0.34)";
+      ctx.shadowBlur = options.shadowBlur || 14;
+      ctx.fillStyle = options.outerFill || "#5d6f9c";
+      ctx.beginPath();
+      ctx.arc(0, 0, radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.lineWidth = options.borderWidth || 2;
+      ctx.strokeStyle = options.borderColor || "rgba(233, 243, 255, 0.94)";
+      ctx.stroke();
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(0, 0, innerRadius, 0, Math.PI * 2);
+      ctx.clip();
+      const avatarImage = canvasImageOrNull(avatarUrl);
+      if (avatarImage) {
+        ctx.drawImage(avatarImage, -innerRadius, -innerRadius, innerRadius * 2, innerRadius * 2);
+      } else {
+        const gradient = ctx.createLinearGradient(-radius, -radius, radius, radius);
+        gradient.addColorStop(0, options.fallbackA || "#6879ff");
+        gradient.addColorStop(1, options.fallbackB || "#ff91dc");
+        ctx.fillStyle = gradient;
+        ctx.fillRect(-innerRadius, -innerRadius, innerRadius * 2, innerRadius * 2);
+        ctx.fillStyle = "rgba(245, 251, 255, 0.96)";
+        ctx.font = `700 ${Math.max(10, size * 0.42)}px var(--font), system-ui, sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(playerInitial(player), 0, size * 0.02);
+      }
+      ctx.restore();
+      ctx.restore();
+    }
+
+    function drawAvatarMarkerCanvas(ctx, player, point, options = {}) {
+      if (!player || !point) return;
+      const {
+        size = markerStyle.otherSize,
+        liftPx = 0,
+        offsetX = 0,
+        offsetY = 0,
+        scaleX = 1,
+        scaleY = 1,
+        rotateDeg = 0,
+        self = false
+      } = options;
+      ctx.save();
+      ctx.translate(point.x + offsetX, point.y + offsetY - liftPx);
+      ctx.rotate((rotateDeg * Math.PI) / 180);
+      ctx.scale(scaleX, scaleY);
+      drawAvatarDisk(ctx, player, size, {
+        borderWidth: self ? 2.6 : 2,
+        borderColor: self ? "rgba(245, 251, 255, 0.98)" : "rgba(233, 243, 255, 0.94)",
+        shadowBlur: self ? 16 : 12,
+        shadowColor: self ? "rgba(0, 0, 0, 0.38)" : "rgba(0, 0, 0, 0.32)"
+      });
+      ctx.restore();
+    }
+
+    function rewardTone(kind) {
+      return {
+        coin: "#ffd581",
+        ticket: "#9ae9ff",
+        gem: "#ffd2ff",
+        potion: "#9cffbf",
+        item: "#b9a0ff"
+      }[String(kind || "")] || "#ffffff";
+    }
+
+    function drawRewardMarkerCanvas(ctx, reward, options = {}) {
+      const point = rewardPoint(reward);
+      if (!point) return;
+      const claimed = Boolean(options.claimed);
+      const unlocked = Boolean(options.unlocked);
+      const justClaimed = Boolean(options.justClaimed);
+      const ts = Number(options.ts || 0) || 0;
+      const kind = String(reward?.kind || "coin");
+      const size = rewardMarkerSize(reward);
+      const radius = size / 2;
+      const tone = rewardTone(kind);
+      const scale = justClaimed ? 1.04 + Math.sin(ts / 120) * 0.04 : 1;
+
+      ctx.save();
+      ctx.translate(point.x, point.y);
+      ctx.scale(scale, scale);
+      ctx.shadowColor = "rgba(0, 0, 0, 0.34)";
+      ctx.shadowBlur = 18;
+      const fill = ctx.createLinearGradient(0, -radius, 0, radius);
+      fill.addColorStop(0, unlocked ? "rgba(42, 52, 96, 0.92)" : "rgba(18, 24, 46, 0.9)");
+      fill.addColorStop(1, unlocked ? "rgba(10, 14, 32, 0.9)" : "rgba(6, 10, 22, 0.88)");
+      ctx.fillStyle = fill;
+      ctx.beginPath();
+      ctx.arc(0, 0, radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.lineWidth = Math.max(2, size * 0.085);
+      ctx.strokeStyle = claimed ? "rgba(235, 243, 255, 0.68)" : tone;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(0, 0, radius * 0.72, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(255, 255, 255, 0.1)";
+      ctx.fill();
+
+      if (claimed) {
+        ctx.fillStyle = "rgba(245, 251, 255, 0.94)";
+        ctx.font = `700 ${Math.max(13, size * 0.44)}px var(--font), system-ui, sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("✓", 0, size * 0.02);
+      } else {
+        const iconSrc = rewardPickupIcons[kind] || "";
+        const rewardIcon = canvasImageOrNull(iconSrc);
+        if (rewardIcon) {
+          const inner = radius * 0.72;
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(0, 0, inner, 0, Math.PI * 2);
+          ctx.clip();
+          ctx.drawImage(rewardIcon, -inner, -inner, inner * 2, inner * 2);
+          ctx.restore();
+        } else {
+          ctx.fillStyle = tone;
+          ctx.font = `700 ${Math.max(13, size * 0.44)}px var(--font), system-ui, sans-serif`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(rewardGlyph(kind), 0, size * 0.02);
+        }
+      }
+      ctx.restore();
+    }
+
+    function drawIconTemplateRewardCanvas(ctx, reward, template, options = {}) {
+      const point = rewardPoint(reward);
+      const image = canvasImageOrNull(template?.src);
+      if (!point || !image) {
+        cacheCanvasImage(template?.src);
+        return false;
+      }
+      const frame = spriteFrameIndex(template, Number(options.ts || 0) || animationNow());
+      const box = spriteFrameBox(template, image, frame);
+      const scale = Math.max(0.1, Number(template?.scale || 1));
+      const width = Math.max(1, Number(template?.width || template?.frameWidth || box.sw || 40) * scale);
+      const height = Math.max(1, Number(template?.height || template?.frameHeight || box.sh || 40) * scale);
+      const anchorX = clamp(Number(template?.anchorX ?? 0.5), 0, 1);
+      const anchorY = clamp(Number(template?.anchorY ?? 0.5), 0, 1);
+      const offsetX = Number(template?.offsetX || 0);
+      const offsetY = Number(template?.offsetY || 0);
+      const claimed = Boolean(options.claimed);
+      const unlocked = Boolean(options.unlocked);
+      const justClaimed = Boolean(options.justClaimed);
+      const ts = Number(options.ts || 0) || 0;
+      const pulse = justClaimed ? 1.05 + Math.sin(ts / 120) * 0.05 : 1;
+
+      ctx.save();
+      ctx.translate(point.x + offsetX, point.y + offsetY);
+      ctx.scale(pulse, pulse);
+      ctx.shadowColor = "rgba(0, 0, 0, 0.34)";
+      ctx.shadowBlur = 16;
+      ctx.drawImage(
+        image,
+        box.sx,
+        box.sy,
+        box.sw,
+        box.sh,
+        -width * anchorX,
+        -height * anchorY,
+        width,
+        height
+      );
+      ctx.shadowBlur = 0;
+      if (unlocked && !claimed) {
+        ctx.lineWidth = Math.max(2, Math.min(width, height) * 0.07);
+        ctx.strokeStyle = "rgba(255, 213, 129, 0.9)";
+        ctx.beginPath();
+        ctx.ellipse(0, 0, (width * 0.56), (height * 0.56), 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      if (claimed) {
+        const badge = Math.max(15, Math.min(width, height) * 0.32);
+        ctx.fillStyle = "rgba(18, 24, 46, 0.86)";
+        ctx.strokeStyle = "rgba(235, 243, 255, 0.88)";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(width * (1 - anchorX) - badge * 0.42, -height * anchorY + badge * 0.5, badge / 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "rgba(245, 251, 255, 0.96)";
+        ctx.font = `700 ${Math.max(10, badge * 0.62)}px var(--font), system-ui, sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("✓", width * (1 - anchorX) - badge * 0.42, -height * anchorY + badge * 0.52);
+      }
+      ctx.restore();
+      return true;
+    }
+
+    function drawRewardNodeCanvas(ctx, reward, options = {}) {
+      const template = iconTemplateById(reward?.iconTemplateId);
+      if (template && drawIconTemplateRewardCanvas(ctx, reward, template, options)) {
+        return;
+      }
+      drawRewardMarkerCanvas(ctx, reward, options);
+    }
+
+    function buildStepGroups() {
+      const steps = Array.isArray(state.board?.steps) ? state.board.steps : [];
+      const groups = new Map();
+      steps.forEach((step, index) => {
+        const point = boardPointFromStep(index);
+        if (!point) return;
+        const key = `${Math.round(point.x * 10) / 10}:${Math.round(point.y * 10) / 10}`;
+        if (!groups.has(key)) {
+          groups.set(key, {
+            key,
+            point,
+            indexes: [],
+            segmentId: String(step?.segmentId || boardSegmentById(step?.segmentId)?.id || "")
+          });
+        }
+        groups.get(key).indexes.push(index);
+      });
+      return Array.from(groups.values());
+    }
+
+    function pushRenderBucket(bucketMap, segmentId, value) {
+      const key = String(segmentId || "");
+      if (!bucketMap.has(key)) {
+        bucketMap.set(key, []);
+      }
+      bucketMap.get(key).push(value);
+    }
+
+    function rebuildRenderIndex() {
+      const stepGroupsBySegment = new Map();
+      const rewardsBySegment = new Map();
+      const spritesBySegment = new Map();
+      const rewardStepIndexes = new Set();
+
+      for (const group of buildStepGroups()) {
+        pushRenderBucket(stepGroupsBySegment, group.segmentId, group);
+      }
+
+      for (const reward of Array.isArray(state.board?.rewards) ? state.board.rewards : []) {
+        pushRenderBucket(rewardsBySegment, reward?.segmentId || boardSegmentById(reward?.segmentId)?.id || "", reward);
+        if (Number.isInteger(reward?.stepIndex) && Number(reward.stepIndex) >= 0) {
+          rewardStepIndexes.add(Number(reward.stepIndex));
+        }
+      }
+
+      for (const node of Array.isArray(state.board?.rewardNodes) ? state.board.rewardNodes : []) {
+        const reward = rewardNodeDrawable(node);
+        pushRenderBucket(rewardsBySegment, reward?.segmentId || boardSegmentById(reward?.segmentId)?.id || "", reward);
+        if (Number.isInteger(reward?.stepIndex) && Number(reward.stepIndex) >= 0) {
+          rewardStepIndexes.add(Number(reward.stepIndex));
+        }
+      }
+
+      for (const sprite of Array.isArray(state.board?.sprites) ? state.board.sprites : []) {
+        pushRenderBucket(spritesBySegment, sprite?.segmentId || boardSegmentById(sprite?.segmentId)?.id || "", sprite);
+      }
+
+      state.renderIndex = {
+        stepGroupsBySegment,
+        rewardsBySegment,
+        spritesBySegment,
+        rewardStepIndexes
+      };
+    }
+
+    function bucketEntries(bucketMap, segmentIds) {
+      const out = [];
+      for (const segmentId of segmentIds) {
+        const entries = bucketMap.get(String(segmentId || ""));
+        if (Array.isArray(entries) && entries.length > 0) {
+          out.push(...entries);
+        }
+      }
+      return out;
+    }
+
+    function drawSingleStepBadgeCanvas(ctx, group) {
+      const firstIndex = group.indexes[0] || 0;
+      const { offsetX, offsetY } = stepBadgeOffset(group.point, firstIndex);
+      const x = group.point.x + offsetX;
+      const y = group.point.y + offsetY;
+      const size = markerStyle.stepBadgeSize;
+      const radius = size / 2;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.shadowColor = "rgba(0, 0, 0, 0.22)";
+      ctx.shadowBlur = 16;
+      ctx.fillStyle = "rgba(7, 11, 28, 0.34)";
+      ctx.beginPath();
+      ctx.arc(0, 0, radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = "rgba(235, 243, 255, 0.82)";
+      ctx.stroke();
+      ctx.fillStyle = "#f5fbff";
+      ctx.font = `700 ${Math.max(10, size * 0.46)}px var(--font), system-ui, sans-serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(stepDisplayNumber(firstIndex), 0, size * 0.03);
+      ctx.restore();
+    }
+
+    function drawStackStepBadgeCanvas(ctx, group) {
+      const firstIndex = group.indexes[0] || 0;
+      const { offsetX, offsetY } = stepBadgeOffset(group.point, firstIndex);
+      const x = group.point.x + offsetX;
+      const y = group.point.y + offsetY;
+      const labels = group.indexes.slice(0, 3).map((index) => stepDisplayNumber(index));
+      const label = labels.join(" | ");
+      const hasMore = group.indexes.length > labels.length;
+      const displayLabel = hasMore ? `${label}...` : label;
+      const width = Math.max(44, 14 + displayLabel.length * 6.8);
+      const height = 20;
+      ctx.save();
+      ctx.translate(x - width / 2, y - height / 2);
+      ctx.fillStyle = "rgba(7, 11, 28, 0.3)";
+      ctx.strokeStyle = "rgba(235, 243, 255, 0.78)";
+      ctx.lineWidth = 1;
+      traceRoundedRect(ctx, 0, 0, width, height, 10);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = "#f5fbff";
+      ctx.font = `${displayLabel.length > 12 ? "700 7.4px" : "700 8.4px"} var(--font), system-ui, sans-serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(displayLabel, width / 2, height / 2 + 0.4);
+      ctx.restore();
+    }
+
+    function drawStepLayerCanvas(ctx, visibleRect) {
+      const segmentIds = visibleSegmentIds(visibleRect);
+      const groups = bucketEntries(state.renderIndex.stepGroupsBySegment, segmentIds)
+        .filter((group) => isBoardPointVisible(group.point, 80));
+      state.canvas.lastVisibleCounts.steps = groups.length;
+      for (const group of groups) {
+        if (group.indexes.length > 1) {
+          drawStackStepBadgeCanvas(ctx, group);
+        } else {
+          drawSingleStepBadgeCanvas(ctx, group);
+        }
+      }
+    }
+
+    function drawRewardLayerCanvas(ctx, visibleRect, ts = 0) {
+      const segmentIds = visibleSegmentIds(visibleRect);
+      const rewards = bucketEntries(state.renderIndex.rewardsBySegment, segmentIds)
+        .filter((reward) => isBoardPointVisible(rewardPoint(reward), 96));
+      const reachedStep = Number(state.bootstrap?.summary?.positionStep ?? -1);
+      const canClaim = !state.bootstrap?.requiresLogin;
+      state.canvas.lastVisibleCounts.rewards = rewards.length;
+      for (const reward of rewards) {
+        const rewardId = String(reward.id || "").trim();
+        const stepIndex = Number.isInteger(reward.stepIndex) ? Number(reward.stepIndex) : -1;
+        const claimed = rewardId !== "" && state.claimedRewardIds.has(rewardId);
+        const unlocked = canClaim && stepIndex >= 0 && reachedStep >= stepIndex && !claimed;
+        const justClaimed = rewardId !== "" && state.recentClaimedRewardIds.has(rewardId);
+        if (reward.__rewardNode) {
+          drawRewardNodeCanvas(ctx, reward, { claimed, unlocked, justClaimed, ts });
+        } else {
+          drawRewardMarkerCanvas(ctx, reward, { claimed, unlocked, justClaimed, ts });
+        }
+      }
+    }
+
+    function spriteFrameBox(sprite, image, frame) {
+      const columns = Math.max(1, Number(sprite?.columns || 1));
+      const rows = Math.max(1, Number(sprite?.rows || 1));
+      const sourceWidth = Math.max(1, Number(sprite?.frameWidth || 0) || image.naturalWidth / columns);
+      const sourceHeight = Math.max(1, Number(sprite?.frameHeight || 0) || image.naturalHeight / rows);
+      const col = frame % columns;
+      const row = Math.floor(frame / columns) % rows;
+      return {
+        sx: Math.min(Math.max(0, image.naturalWidth - sourceWidth), col * sourceWidth + Number(sprite?.frameX || 0)),
+        sy: Math.min(Math.max(0, image.naturalHeight - sourceHeight), row * sourceHeight + Number(sprite?.frameY || 0)),
+        sw: sourceWidth,
+        sh: sourceHeight
+      };
+    }
+
+	    function drawSpriteLayerCanvas(ctx, visibleRect, ts = animationNow()) {
+      const segmentIds = visibleSegmentIds(visibleRect);
+      const sprites = bucketEntries(state.renderIndex.spritesBySegment, segmentIds)
+        .filter((sprite) => isBoardPointVisible(spritePoint(sprite), Math.max(Number(sprite?.width || 48), Number(sprite?.height || 48))));
+      state.canvas.lastVisibleCounts.sprites = sprites.length;
+      for (const sprite of sprites) {
+        const point = spritePoint(sprite);
+        const image = canvasImageOrNull(sprite?.src);
+        if (!point || !image) {
+          cacheCanvasImage(sprite?.src);
+          continue;
+        }
+	        const width = Math.max(1, Number(sprite.width || 48));
+	        const height = Math.max(1, Number(sprite.height || 48));
+	        const frame = spriteFrameIndex(sprite, ts);
+	        const box = spriteFrameBox(sprite, image, frame);
+	        const fadePx = spriteEdgeFadePx(sprite, width, height);
+	        const renderImage = fadePx > 0 ? softSpriteFrame(image, box, width, height, fadePx) : image;
+	        const sourceBox = fadePx > 0
+	          ? { sx: 0, sy: 0, sw: Math.max(1, Math.round(width)), sh: Math.max(1, Math.round(height)) }
+	          : box;
+	        ctx.save();
+	        ctx.shadowColor = "rgba(0, 0, 0, 0.28)";
+	        ctx.shadowBlur = 18;
+	        ctx.drawImage(
+	          renderImage,
+	          sourceBox.sx,
+	          sourceBox.sy,
+	          sourceBox.sw,
+	          sourceBox.sh,
+	          point.x - width / 2,
+	          point.y - height / 2,
+	          width,
+          height
+        );
+        ctx.restore();
+      }
+    }
+
+    function friendClusterSide(point) {
+      const size = boardSize();
+      return point.x < size.width * 0.55 ? 1 : -1;
+    }
+
+    function friendClusterSlot(point, index, total) {
+      const side = friendClusterSide(point);
+      const x = side * 46;
+      const y = total > 1 ? (index === 0 ? -22 : 18) : -8;
+      return { x, y };
+    }
+
+    function drawPlayerOverflowChipAtCanvas(ctx, label, x, y) {
+      const width = Math.max(25, 12 + String(label).length * 7);
+      const height = 19;
+      ctx.save();
+      ctx.translate(x - width / 2, y - height / 2);
+      ctx.shadowColor = "rgba(0, 0, 0, 0.24)";
+      ctx.shadowBlur = 10;
+      ctx.fillStyle = "rgba(250, 245, 255, 0.82)";
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.84)";
+      ctx.lineWidth = 1.1;
+      traceRoundedRect(ctx, 0, 0, width, height, 9.5);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.stroke();
+      ctx.fillStyle = "#4d2868";
+      ctx.font = "800 9.5px var(--font), system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(label, width / 2, height / 2 + 0.3);
+      ctx.restore();
+      return {
+        x,
+        y,
+        radius: Math.max(width, height) * 0.72
+      };
+    }
+
+    function playerOverflowChipPoint(point) {
+      const side = friendClusterSide(point);
+      return {
+        x: point.x + side * 90,
+        y: point.y + 36
+      };
+    }
+
+    function drawPlayerOverflowChipCanvas(ctx, label, point, options = {}) {
+      const chip = playerOverflowChipPoint(point);
+      return drawPlayerOverflowChipAtCanvas(ctx, label, chip.x, chip.y);
+    }
+
+    function drawPlayerClusterChipLayerCanvas(ctx) {
+      for (const target of state.canvas.playerClusterTargets || []) {
+        drawPlayerOverflowChipAtCanvas(ctx, target.label || "+", target.x, target.y);
+      }
+    }
+
+    function drawPlayerLayerCanvas(ctx, visibleRect) {
+      const groups = clusterPlayers();
+      let visiblePlayerCount = 0;
+      state.canvas.playerClusterTargets = [];
+      for (const [stepKey, players] of groups.entries()) {
+        const point = stepKey === "__entry__"
+          ? boardEntryPoint()
+          : boardPointFromStep(Number(stepKey));
+        if (!point || !isBoardPointVisible(point, 96)) continue;
+        visiblePlayerCount += players.length;
+
+        const shownPlayers = players.slice(0, 2);
+        shownPlayers.forEach((player, index) => {
+          const slot = friendClusterSlot(point, index, shownPlayers.length);
+          drawAvatarMarkerCanvas(ctx, player, point, {
+            size: markerStyle.otherSize,
+            liftPx: markerStyle.otherLift,
+            offsetX: slot.x,
+            offsetY: slot.y
+          });
+        });
+
+        if (players.length > shownPlayers.length && stepKey !== "__entry__") {
+          const hiddenCount = players.length - shownPlayers.length;
+          const label = players.length > 9 ? "9+" : `+${hiddenCount}`;
+          const hit = drawPlayerOverflowChipCanvas(ctx, label, point);
+          state.canvas.playerClusterTargets.push({
+            stepIndex: Number(stepKey),
+            count: players.length,
+            label,
+            x: hit.x,
+            y: hit.y,
+            radius: hit.radius
+          });
+        }
+      }
+      state.canvas.lastVisibleCounts.players = visiblePlayerCount;
+    }
+
+    function selfVisualBasePoint(basePoint = currentSelfPoint()) {
+      if (!basePoint) return null;
+      return {
+        x: basePoint.x + (state.walk.active ? state.walk.visualOffsetX : 0),
+        y: basePoint.y + (state.walk.active ? state.walk.visualOffsetY : 0)
+      };
+    }
+
+    function selfAvatarCenterPoint(basePoint = currentSelfPoint(), ts = animationNow()) {
+      const visualPoint = selfVisualBasePoint(basePoint);
+      if (!visualPoint) return null;
+      const liftPx = state.walk.active
+        ? state.walk.visualLiftPx
+        : markerStyle.selfLift + Math.sin(ts / 360) * 2;
+      return {
+        x: visualPoint.x,
+        y: visualPoint.y - liftPx,
+        liftPx
+      };
+    }
+
+    function resetSelfFxTrail(ts = animationNow()) {
+      const center = selfAvatarCenterPoint(currentSelfPoint(), ts);
+      state.selfFx.lastPoint = center ? { x: center.x, y: center.y } : null;
+      state.selfFx.lastUpdateAt = ts;
+      state.selfFx.lastEmitAt = ts;
+      state.selfFx.velocityX = 0;
+      state.selfFx.velocityY = 0;
+    }
+
+    function acquireSelfParticle(limit) {
+      const particles = state.selfFx.particles;
+      for (const particle of particles) {
+        if (!particle.active) return particle;
+      }
+      if (particles.length < limit) {
+        const particle = { active: false };
+        particles.push(particle);
+        return particle;
+      }
+      let oldest = particles[0];
+      for (const particle of particles) {
+        if (Number(particle.bornAt || 0) < Number(oldest.bornAt || 0)) {
+          oldest = particle;
+        }
+      }
+      return oldest;
+    }
+
+    function emitSelfTrailParticles(center, velocity, ts) {
+      if (!center || !state.walk.active) return;
+      const speed = Math.hypot(velocity.x, velocity.y);
+      if (speed < 10) return;
+      const boosted = Boolean(state.walk.boost);
+      const limit = boosted ? 45 : 86;
+      const interval = boosted ? 42 : 26;
+      if (ts - Number(state.selfFx.lastEmitAt || 0) < interval) return;
+      state.selfFx.lastEmitAt = ts;
+
+      const ux = velocity.x / speed;
+      const uy = velocity.y / speed;
+      const nx = -uy;
+      const ny = ux;
+      const count = boosted ? 1 : clamp(Math.floor(speed / 180) + 1, 1, 3);
+
+      for (let index = 0; index < count; index += 1) {
+        const particle = acquireSelfParticle(limit);
+        const side = (seededNoise() - 0.5) * 13;
+        const back = 7 + seededNoise() * 11;
+        const drift = 18 + seededNoise() * 34;
+        particle.active = true;
+        particle.bornAt = ts;
+        particle.life = (boosted ? 360 : 540) + seededNoise() * (boosted ? 120 : 220);
+        particle.x = center.x - (ux * back) + (nx * side);
+        particle.y = center.y - (uy * back) + (ny * side);
+        particle.vx = (velocity.x * 0.065) - (ux * drift) + (nx * ((seededNoise() - 0.5) * 34));
+        particle.vy = (velocity.y * 0.065) - (uy * drift) + (ny * ((seededNoise() - 0.5) * 34)) - (8 + seededNoise() * 16);
+        particle.size = 1.15 + seededNoise() * 1.75;
+        particle.spin = seededNoise() * Math.PI * 2;
+        particle.tone = seededNoise();
+        particle.kind = "trail";
+        particle.drag = 0.08;
+        particle.gravity = -10;
+      }
+    }
+
+    function emitLandingBurstParticles(point, options = {}) {
+      if (!point) return;
+      const boosted = Boolean(options.boosted);
+      const special = Boolean(options.special);
+      const direction = Number(options.angle || 0);
+      const count = special
+        ? (boosted ? 7 : 12)
+        : (boosted ? 5 : 8);
+      const limit = special
+        ? (boosted ? 64 : 104)
+        : (boosted ? 48 : 72);
+      for (let index = 0; index < count; index += 1) {
+        const particle = acquireSelfParticle(limit);
+        const spread = (Math.PI * 2 * index) / count + (seededNoise() - 0.5) * 0.72;
+        const directionalBias = Math.cos(spread - direction) * 0.16;
+        const speed = special
+          ? (boosted ? 44 : 56) + seededNoise() * (boosted ? 38 : 58)
+          : (boosted ? 32 : 40) + seededNoise() * (boosted ? 22 : 34);
+        const liftKick = special
+          ? (boosted ? 30 : 42) + seededNoise() * (boosted ? 22 : 32)
+          : (boosted ? 22 : 30) + seededNoise() * (boosted ? 16 : 22);
+        const startRadius = special
+          ? 4 + seededNoise() * 10
+          : 2 + seededNoise() * 6;
+        particle.active = true;
+        particle.kind = "burst";
+        particle.bornAt = options.ts || animationNow();
+        particle.life = special
+          ? (boosted ? 500 : 700) + seededNoise() * (boosted ? 150 : 220)
+          : (boosted ? 380 : 520) + seededNoise() * (boosted ? 110 : 160);
+        particle.x = point.x + Math.cos(spread) * startRadius;
+        particle.y = point.y + Math.sin(spread) * startRadius;
+        particle.vx = Math.cos(spread) * speed * (1 + directionalBias);
+        particle.vy = Math.sin(spread) * speed * 0.72 - liftKick;
+        particle.size = (special ? 1.85 : 1.15) + seededNoise() * (special ? 2.75 : 1.75);
+        particle.spin = seededNoise() * Math.PI * 2;
+        particle.tone = seededNoise();
+        particle.color = selfParticleToneColor(particle.tone, "burst");
+        particle.alphaMul = special ? 1 : 0.62;
+        particle.tailMul = special ? 1 : 0.72;
+        particle.glowMul = special ? 1 : 0.74;
+        particle.drag = special ? 0.16 : 0.22;
+        particle.gravity = special ? 120 : 92;
+      }
+    }
+
+    function stepHasReward(stepValue) {
+      return state.renderIndex.rewardStepIndexes.has(Number(stepValue));
+    }
+
+    function updateSelfFx(ts = animationNow()) {
+      const center = selfAvatarCenterPoint(currentSelfPoint(), ts);
+      const lastAt = Number(state.selfFx.lastUpdateAt || 0);
+      const dt = lastAt > 0 ? clamp((ts - lastAt) / 1000, 0, 0.05) : 0;
+
+      for (const particle of state.selfFx.particles) {
+        if (!particle.active || dt <= 0) continue;
+        particle.x += particle.vx * dt;
+        particle.y += particle.vy * dt;
+        const drag = Math.pow(Number(particle.drag || 0.08), dt);
+        particle.vx *= drag;
+        particle.vy = (particle.vy * drag) + (Number(particle.gravity ?? -10) * dt);
+        if (ts - Number(particle.bornAt || 0) > Number(particle.life || 1)) {
+          particle.active = false;
+        }
+      }
+
+      if (!center) {
+        state.selfFx.lastPoint = null;
+        state.selfFx.lastUpdateAt = ts;
+        return;
+      }
+
+      if (dt > 0 && state.selfFx.lastPoint) {
+        state.selfFx.velocityX = (center.x - state.selfFx.lastPoint.x) / dt;
+        state.selfFx.velocityY = (center.y - state.selfFx.lastPoint.y) / dt;
+      } else {
+        state.selfFx.velocityX = 0;
+        state.selfFx.velocityY = 0;
+      }
+
+      emitSelfTrailParticles(center, {
+        x: state.selfFx.velocityX,
+        y: state.selfFx.velocityY
+      }, ts);
+
+      state.selfFx.lastPoint = { x: center.x, y: center.y };
+      state.selfFx.lastUpdateAt = ts;
+    }
+
+    function addLandingStepPulse(stepValue, ts = animationNow()) {
+      const point = pathPointForValue(stepValue);
+      if (!point) return;
+      const previousPoint = pathPointForValue(stepValue - 1) || point;
+      const dx = point.x - previousPoint.x;
+      const dy = point.y - previousPoint.y;
+      const distance = Math.hypot(dx, dy);
+      const special = stepHasReward(stepValue);
+      const pulse = {
+        point,
+        stepValue,
+        startedAt: ts,
+        impactAt: ts,
+        duration: special
+          ? (state.walk.boost ? 680 : 940)
+          : (state.walk.boost ? 560 : 760),
+        segmentDuration: 1,
+        radius: special
+          ? clamp(distance * 0.76, 58, 84)
+          : clamp(distance * 0.62, 48, 68),
+        angle: Math.atan2(dy, dx || 0.0001),
+        special
+      };
+      state.selfFx.activeStepGlow = pulse;
+      state.selfFx.landingPulse = pulse;
+      emitLandingBurstParticles(point, {
+        angle: pulse.angle,
+        boosted: state.walk.boost,
+        special,
+        ts
+      });
+    }
+
+    function drawSelfGroundFxCanvas(ctx, ts = animationNow(), visibleRect = visibleBoardRect(0)) {
+      const glow = state.selfFx.activeStepGlow;
+      if (!glow?.point) return;
+      const age = ts - Number(glow.startedAt || 0);
+      const duration = Math.max(1, Number(glow.duration || 1));
+      const p = clamp(age / duration, 0, 1);
+      if (p >= 1) {
+        state.selfFx.activeStepGlow = null;
+        state.selfFx.landingPulse = null;
+        return;
+      }
+      if (!isBoardPointVisible(glow.point, 72)) return;
+
+      const baseRadius = Number(glow.radius || 52);
+      const grow = easeOutQuart(clamp(p / 0.24, 0, 1));
+      const flash = Math.pow(1 - clamp(p / 0.22, 0, 1), 1.75);
+      const hold = p < 0.24
+        ? 1
+        : Math.pow(1 - clamp((p - 0.24) / 0.76, 0, 1), 1.05);
+      const tileRadius = baseRadius * lerp(0.24, 1, grow);
+
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      ctx.translate(glow.point.x, glow.point.y);
+      ctx.shadowColor = `rgba(255, 92, 235, ${0.92 * hold + 0.48 * flash})`;
+      ctx.shadowBlur = baseRadius * (0.72 + flash * 0.38);
+      const bloom = ctx.createRadialGradient(0, 0, 1, 0, 0, tileRadius);
+      bloom.addColorStop(0, `rgba(255, 255, 255, ${0.42 * hold + 0.88 * flash})`);
+      bloom.addColorStop(0.22, `rgba(255, 255, 255, ${0.26 * hold + 0.48 * flash})`);
+      bloom.addColorStop(0.46, `rgba(255, 132, 244, ${0.72 * hold})`);
+      bloom.addColorStop(0.74, `rgba(115, 231, 255, ${0.32 * hold})`);
+      bloom.addColorStop(1, "rgba(132, 86, 255, 0)");
+      ctx.fillStyle = bloom;
+      ctx.beginPath();
+      ctx.arc(0, 0, tileRadius, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (flash > 0.02) {
+        ctx.shadowColor = `rgba(255, 255, 255, ${0.88 * flash})`;
+        ctx.shadowBlur = baseRadius * 0.42;
+        const flashCore = ctx.createRadialGradient(0, 0, 1, 0, 0, tileRadius * 0.62);
+        flashCore.addColorStop(0, `rgba(255, 255, 255, ${0.92 * flash})`);
+        flashCore.addColorStop(0.55, `rgba(255, 255, 255, ${0.46 * flash})`);
+        flashCore.addColorStop(1, "rgba(255, 255, 255, 0)");
+        ctx.fillStyle = flashCore;
+        ctx.beginPath();
+        ctx.arc(0, 0, tileRadius * 0.62, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    function drawSelfParticleFxCanvas(ctx, ts = animationNow()) {
+      const particles = state.selfFx.particles;
+      if (particles.length === 0) return;
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      ctx.lineCap = "round";
+      for (const particle of particles) {
+        if (!particle.active) continue;
+        const age = clamp((ts - Number(particle.bornAt || 0)) / Math.max(1, Number(particle.life || 1)), 0, 1);
+        if (age >= 1 || !isBoardPointVisible(particle, 80)) continue;
+        const burst = particle.kind === "burst";
+        const fade = burst
+          ? Math.pow(1 - age, 1.28)
+          : Math.pow(1 - age, 1.6);
+        const twinkle = burst
+          ? 0.9 + Math.sin((ts * 0.01) + Number(particle.spin || 0)) * 0.1
+          : 0.78 + Math.sin((ts * 0.018) + Number(particle.spin || 0)) * 0.22;
+        const alpha = fade * twinkle * (burst ? 0.92 : 0.82) * Number(particle.alphaMul || 1);
+        const radius = Number(particle.size || 2) * (burst ? (1.16 + age * 1.05) : (0.78 + age * 0.62));
+        const edge = particle.color || selfParticleToneColor(particle.tone, particle.kind);
+        const speed = Math.hypot(particle.vx, particle.vy);
+        const ux = speed > 0.001 ? particle.vx / speed : Math.cos(Number(particle.spin || 0));
+        const uy = speed > 0.001 ? particle.vy / speed : Math.sin(Number(particle.spin || 0));
+        const tail = radius * (burst ? (3.8 + age * 2.2) : (5.6 + age * 2.4)) * Number(particle.tailMul || 1);
+        const tailGradient = ctx.createLinearGradient(
+          particle.x - ux * tail,
+          particle.y - uy * tail,
+          particle.x + ux * radius,
+          particle.y + uy * radius
+        );
+        tailGradient.addColorStop(0, `rgba(${edge}, 0)`);
+        tailGradient.addColorStop(0.45, `rgba(${edge}, ${(burst ? 0.14 : 0.18) * alpha})`);
+        tailGradient.addColorStop(1, `rgba(255, 255, 255, ${(burst ? 0.36 : 0.46) * alpha})`);
+        ctx.strokeStyle = tailGradient;
+        ctx.lineWidth = Math.max(0.55, radius * (burst ? 0.42 : 0.46));
+        ctx.beginPath();
+        ctx.moveTo(particle.x - ux * tail, particle.y - uy * tail);
+        ctx.lineTo(particle.x + ux * radius, particle.y + uy * radius);
+        ctx.stroke();
+
+        const glowRadius = radius * (burst ? 3.6 : 2.2) * Number(particle.glowMul || 1);
+        const gradient = ctx.createRadialGradient(particle.x, particle.y, 0.2, particle.x, particle.y, glowRadius);
+        gradient.addColorStop(0, `rgba(255, 255, 255, ${(burst ? 0.62 : 0.82) * alpha})`);
+        gradient.addColorStop(0.34, `rgba(${edge}, ${(burst ? 0.42 : 0.34) * alpha})`);
+        gradient.addColorStop(0.68, `rgba(${edge}, ${burst ? 0.16 * alpha : 0})`);
+        gradient.addColorStop(1, `rgba(${edge}, 0)`);
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(particle.x, particle.y, glowRadius, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (!burst && alpha > 0.12) {
+          ctx.strokeStyle = `rgba(255, 255, 255, ${0.44 * alpha})`;
+          ctx.lineWidth = Math.max(0.7, radius * 0.38);
+          const ray = radius * 2.8;
+          ctx.beginPath();
+          ctx.moveTo(particle.x - ray, particle.y);
+          ctx.lineTo(particle.x + ray, particle.y);
+          ctx.moveTo(particle.x, particle.y - ray);
+          ctx.lineTo(particle.x, particle.y + ray);
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+    }
+
+    function drawSelfAuraCanvas(ctx, center, options = {}) {
+      if (!center) return;
+      const {
+        size = markerStyle.selfSize,
+        scaleX = 1,
+        scaleY = 1,
+        rotateDeg = 0,
+        ts = animationNow(),
+        active = false
+      } = options;
+      const radius = size / 2;
+      const pulse = 0.5 + Math.sin(ts / 360) * 0.5;
+      const activeBoost = active ? 1 : 0;
+      const speed = Math.hypot(state.selfFx.velocityX, state.selfFx.velocityY);
+      const kinetic = clamp(speed / 360, 0, 1);
+      const orbit = (ts * 0.0048) % (Math.PI * 2);
+
+      ctx.save();
+      ctx.translate(center.x, center.y);
+      ctx.rotate((rotateDeg * Math.PI) / 180);
+      ctx.scale(scaleX, scaleY);
+      ctx.globalCompositeOperation = "lighter";
+      const outer = radius * (1.42 + (pulse * 0.12) + activeBoost * 0.1 + kinetic * 0.16);
+      const aura = ctx.createRadialGradient(0, 0, radius * 0.4, 0, 0, outer);
+      aura.addColorStop(0, `rgba(255, 255, 255, ${0.18 + activeBoost * 0.08 + kinetic * 0.08})`);
+      aura.addColorStop(0.38, `rgba(255, 178, 229, ${0.24 + activeBoost * 0.12 + kinetic * 0.08})`);
+      aura.addColorStop(0.72, `rgba(128, 238, 255, ${0.12 + activeBoost * 0.08 + kinetic * 0.06})`);
+      aura.addColorStop(1, "rgba(255, 205, 108, 0)");
+      ctx.fillStyle = aura;
+      ctx.beginPath();
+      ctx.arc(0, 0, outer, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.lineCap = "round";
+      ctx.strokeStyle = `rgba(255, 255, 255, ${0.54 + activeBoost * 0.16 + kinetic * 0.18})`;
+      ctx.lineWidth = 1.8 + kinetic * 1.1;
+      ctx.beginPath();
+      ctx.arc(0, 0, radius * 1.16, orbit, orbit + Math.PI * (0.72 + kinetic * 0.34));
+      ctx.stroke();
+
+      ctx.strokeStyle = `rgba(255, 126, 228, ${0.32 + activeBoost * 0.16 + kinetic * 0.14})`;
+      ctx.lineWidth = 3.2 + kinetic * 1.4;
+      ctx.beginPath();
+      ctx.arc(0, 0, radius * 1.34, orbit + Math.PI * 0.88, orbit + Math.PI * (1.58 + kinetic * 0.26));
+      ctx.stroke();
+
+      ctx.strokeStyle = `rgba(115, 235, 255, ${0.28 + activeBoost * 0.12 + kinetic * 0.16})`;
+      ctx.lineWidth = 1.45 + kinetic * 0.9;
+      ctx.beginPath();
+      ctx.arc(0, 0, radius * 1.5, -orbit * 0.74, -orbit * 0.74 + Math.PI * 0.58);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawSelfOrbFxCanvas(ctx, center, options = {}) {
+      if (!center) return;
+      const {
+        ts = animationNow(),
+        size = markerStyle.selfSize,
+        velocityX = 0,
+        velocityY = 0,
+        active = false
+      } = options;
+      const speed = Math.hypot(velocityX, velocityY);
+      const ux = speed > 0.001 ? velocityX / speed : 1;
+      const uy = speed > 0.001 ? velocityY / speed : 0;
+      const stretch = clamp(speed / 420, 0, 1);
+      const kineticScale = 1 + stretch * 0.18;
+      const configs = [
+        { phase: 0.1, speed: 0.0032, rx: 0.62, ry: 0.28, size: 3.6, tone: "255, 225, 142" },
+        { phase: 2.25, speed: -0.0027, rx: 0.52, ry: 0.34, size: 3.05, tone: "132, 238, 255" },
+        { phase: 4.38, speed: 0.0022, rx: 0.7, ry: 0.22, size: 2.85, tone: "255, 132, 224" },
+        { phase: 5.42, speed: -0.0018, rx: 0.4, ry: 0.42, size: 2.25, tone: "255, 246, 205" }
+      ];
+
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      for (const orb of configs) {
+        const a = (ts * orb.speed) + orb.phase;
+        const radiusX = size * orb.rx * kineticScale;
+        const radiusY = size * orb.ry * kineticScale;
+        const x = center.x + Math.cos(a) * radiusX + ux * stretch * 6;
+        const y = center.y + Math.sin(a) * radiusY + uy * stretch * 3.8;
+        const previousX = center.x + Math.cos(a - 0.34) * radiusX;
+        const previousY = center.y + Math.sin(a - 0.34) * radiusY;
+        const r = orb.size * (active ? 1.18 : 1) * kineticScale;
+        const trail = ctx.createLinearGradient(previousX, previousY, x, y);
+        trail.addColorStop(0, `rgba(${orb.tone}, 0)`);
+        trail.addColorStop(0.72, `rgba(${orb.tone}, ${active ? 0.44 : 0.26})`);
+        trail.addColorStop(1, "rgba(255, 255, 255, 0.72)");
+        ctx.strokeStyle = trail;
+        ctx.lineWidth = r * 0.82;
+        ctx.beginPath();
+        ctx.moveTo(previousX, previousY);
+        ctx.lineTo(x, y);
+        ctx.stroke();
+
+        const glow = ctx.createRadialGradient(x, y, 0.2, x, y, r * 3.4);
+        glow.addColorStop(0, "rgba(255, 255, 255, 0.98)");
+        glow.addColorStop(0.3, `rgba(${orb.tone}, 0.74)`);
+        glow.addColorStop(1, `rgba(${orb.tone}, 0)`);
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(x, y, r * 3.4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    function drawSelfLayerCanvas(ctx, ts = animationNow()) {
+      const selfPlayer = state.bootstrap?.self || null;
+      const point = currentSelfPoint();
+      if (!selfPlayer || !point || !isBoardPointVisible(point, 120)) return;
+      const liftPx = state.walk.active
+        ? state.walk.visualLiftPx
+        : markerStyle.selfLift + Math.sin(ts / 360) * 2;
+      const scaleX = state.walk.active ? state.walk.visualScaleX : 1;
+      const scaleY = state.walk.active ? state.walk.visualScaleY : 1;
+      const rotateDeg = state.walk.active ? state.walk.visualTiltDeg : Math.sin(ts / 520) * 0.8;
+      const visualPoint = selfVisualBasePoint(point);
+      const center = selfAvatarCenterPoint(point, ts);
+      drawSelfAuraCanvas(ctx, center, {
+        size: markerStyle.selfSize,
+        scaleX,
+        scaleY,
+        rotateDeg,
+        ts,
+        active: state.walk.active
+      });
+      drawAvatarMarkerCanvas(ctx, selfPlayer, visualPoint, {
+        size: markerStyle.selfSize,
+        liftPx,
+        scaleX,
+        scaleY,
+        rotateDeg,
+        self: true
+      });
+      if (state.walk.active) {
+        drawSelfOrbFxCanvas(ctx, center, {
+          ts,
+          size: markerStyle.selfSize,
+          velocityX: state.selfFx.velocityX,
+          velocityY: state.selfFx.velocityY,
+          active: true
+        });
+      }
+    }
+
+    function ambientZoneAtY(y) {
+      const size = boardSize();
+      const t = clamp(y / Math.max(1, size.height), 0, 1);
+      if (t < 0.17) return "rainbow";
+      if (t >= 0.17 && t < 0.34) return "space";
+      return "city";
+    }
+
+    function ambientOrbTone(zone, value) {
+      if (zone === "rainbow") {
+        const tones = [
+          "255, 174, 229",
+          "255, 221, 133",
+          "132, 238, 255",
+          "157, 255, 205",
+          "198, 158, 255"
+        ];
+        return tones[Math.floor(clamp(value, 0, 0.999) * tones.length)] || tones[0];
+      }
+      if (value < 0.38) return "255, 220, 132";
+      if (value < 0.72) return "127, 231, 255";
+      return "255, 153, 226";
+    }
+
+    function updateAmbienceCameraState(ts = animationNow()) {
+      const lastAt = Number(state.ambience.lastCameraAt || 0);
+      const dt = lastAt > 0 ? clamp((ts - lastAt) / 1000, 0.001, 0.08) : 0;
+      if (dt > 0) {
+        const vx = (state.camera.x - Number(state.ambience.lastCameraX || 0)) / dt;
+        const vy = (state.camera.y - Number(state.ambience.lastCameraY || 0)) / dt;
+        state.ambience.cameraVelocityX = lerp(Number(state.ambience.cameraVelocityX || 0), vx, 0.22);
+        state.ambience.cameraVelocityY = lerp(Number(state.ambience.cameraVelocityY || 0), vy, 0.22);
+      } else {
+        state.ambience.cameraVelocityX = 0;
+        state.ambience.cameraVelocityY = 0;
+      }
+      state.ambience.lastCameraX = state.camera.x;
+      state.ambience.lastCameraY = state.camera.y;
+      state.ambience.lastCameraAt = ts;
+    }
+
+    function drawAmbientOrbFxCanvas(ctx, ts = animationNow(), visibleRect = visibleBoardRect(0)) {
+      const size = boardSize();
+      if (!size.width || !size.height) return;
+      const scale = Math.max(0.2, state.camera.scale || 1);
+      const viewportW = Math.max(1, Number(state.canvas.viewportWidth || boardCanvas?.clientWidth || 1));
+      const viewportH = Math.max(1, Number(state.canvas.viewportHeight || boardCanvas?.clientHeight || 1));
+      const visibleCenterX = (visibleRect.left + visibleRect.right) / 2;
+      const visibleCenterY = (visibleRect.top + visibleRect.bottom) / 2;
+      const cameraTrailX = clamp(-Number(state.ambience.cameraVelocityX || 0) * 0.048, -92, 92);
+      const cameraTrailY = clamp(-Number(state.ambience.cameraVelocityY || 0) * 0.048, -92, 92);
+      const cameraTrailPower = clamp(Math.hypot(cameraTrailX, cameraTrailY) / 92, 0, 1);
+      const layers = [
+        { cellW: 182, cellH: 228, density: 0.34, depth: 0.24, dx: 1, dy: -0.3, speed: 0.00013, alpha: 0.42 },
+        { cellW: 226, cellH: 272, density: 0.28, depth: 0.18, dx: -1, dy: 0.22, speed: 0.0001, alpha: 0.34 },
+        { cellW: 202, cellH: 248, density: 0.24, depth: 0.13, dx: 0.42, dy: 1, speed: 0.000085, alpha: 0.3 },
+        { cellW: 264, cellH: 312, density: 0.2, depth: 0.09, dx: -0.34, dy: -1, speed: 0.000072, alpha: 0.24 }
+      ];
+
+      ctx.save();
+      ctx.setTransform(state.canvas.dpr, 0, 0, state.canvas.dpr, 0, 0);
+      ctx.globalCompositeOperation = "lighter";
+      for (let layerIndex = 0; layerIndex < layers.length; layerIndex += 1) {
+        const layer = layers[layerIndex];
+        const depth = Number(layer.depth || 0);
+        const parallaxPaddingX = 140 + viewportW * depth;
+        const parallaxPaddingY = 170 + viewportH * depth;
+        const startX = Math.floor((visibleRect.left - (parallaxPaddingX / scale)) / layer.cellW) - 1;
+        const endX = Math.ceil((visibleRect.right + (parallaxPaddingX / scale)) / layer.cellW) + 1;
+        const startY = Math.floor((visibleRect.top - (parallaxPaddingY / scale)) / layer.cellH) - 1;
+        const endY = Math.ceil((visibleRect.bottom + (parallaxPaddingY / scale)) / layer.cellH) + 1;
+
+        for (let cy = startY; cy <= endY; cy += 1) {
+          for (let cx = startX; cx <= endX; cx += 1) {
+            const seed = (cx * 73856093) ^ (cy * 19349663) ^ (layerIndex * 83492791) ^ state.ambience.seed;
+            const gate = hashNoise(seed);
+            const centerY = (cy + hashNoise(seed + 11)) * layer.cellH;
+            const zone = ambientZoneAtY(centerY);
+            if (zone === "space") continue;
+            const zoneDensity = zone === "rainbow" ? layer.density * 1.2 : layer.density;
+            if (gate > zoneDensity) continue;
+
+            const centerX = (cx + hashNoise(seed + 7)) * layer.cellW;
+            const phase = hashNoise(seed + 19) * Math.PI * 2;
+            const drift = 10 + hashNoise(seed + 23) * 24;
+            const wobbleX = Math.sin(ts * layer.speed + phase) * drift + Math.sin(ts * (layer.speed * 0.44) + phase * 1.6) * drift * 0.26;
+            const wobbleY = Math.cos(ts * (layer.speed * 0.82) + phase) * drift * 0.55 + Math.cos(ts * (layer.speed * 0.31) + phase * 1.2) * drift * 0.18;
+            const x = centerX + wobbleX + (layer.dx * Math.sin(ts * 0.00013 + phase) * 8);
+            const y = centerY + wobbleY + (layer.dy * Math.cos(ts * 0.0001 + phase) * 10);
+
+            const prevTs = ts - 220;
+            const prevX = centerX
+              + Math.sin(prevTs * layer.speed + phase) * drift
+              + Math.sin(prevTs * (layer.speed * 0.44) + phase * 1.6) * drift * 0.26
+              + (layer.dx * Math.sin(prevTs * 0.00013 + phase) * 8);
+            const prevY = centerY
+              + Math.cos(prevTs * (layer.speed * 0.82) + phase) * drift * 0.55
+              + Math.cos(prevTs * (layer.speed * 0.31) + phase * 1.2) * drift * 0.18
+              + (layer.dy * Math.cos(prevTs * 0.0001 + phase) * 10);
+            const toViewportX = (boardX) => state.camera.x + (boardX * scale) + ((boardX - visibleCenterX) * scale * depth);
+            const toViewportY = (boardY) => state.camera.y + (boardY * scale) + ((boardY - visibleCenterY) * scale * depth);
+            const screenX = toViewportX(x);
+            const screenY = toViewportY(y);
+            if (screenX < -96 || screenX > viewportW + 96 || screenY < -112 || screenY > viewportH + 112) continue;
+
+            const cameraLag = 0.54 + depth * 2.6 + layerIndex * 0.08;
+            const prevScreenX = toViewportX(prevX) + cameraTrailX * cameraLag;
+            const prevScreenY = toViewportY(prevY) + cameraTrailY * cameraLag;
+            const tone = ambientOrbTone(zone, hashNoise(seed + 31));
+            const twinkle = 0.7 + Math.sin(ts * (0.0024 + hashNoise(seed + 37) * 0.0019) + phase) * 0.24;
+            const flutter = 0.76 + Math.sin(ts * (0.008 + hashNoise(seed + 59) * 0.0046) + phase * 1.4) * 0.24;
+            const zoomLift = clamp(Math.pow(scale, 0.16), 0.84, 1.28);
+            const radius = ((zone === "rainbow" ? 3.1 : 2.7) + hashNoise(seed + 43) * 2.7) * zoomLift * (1 + depth * 0.2);
+            const glowRadius = radius * (zone === "rainbow" ? 7.6 : 6.6);
+            const alpha = layer.alpha * twinkle * flutter * (zone === "rainbow" ? 1.08 : 0.94);
+            const tail = ctx.createLinearGradient(prevScreenX, prevScreenY, screenX, screenY);
+            tail.addColorStop(0, `rgba(${tone}, 0)`);
+            tail.addColorStop(0.36, `rgba(${tone}, ${(0.14 + cameraTrailPower * 0.16) * alpha})`);
+            tail.addColorStop(1, `rgba(255, 255, 255, ${(0.5 + cameraTrailPower * 0.22) * alpha})`);
+            ctx.strokeStyle = tail;
+            ctx.lineWidth = Math.max(0.7, radius * (0.5 + cameraTrailPower * 0.28));
+            ctx.lineCap = "round";
+            ctx.beginPath();
+            ctx.moveTo(prevScreenX, prevScreenY);
+            ctx.lineTo(screenX, screenY);
+            ctx.stroke();
+
+            const glow = ctx.createRadialGradient(screenX, screenY, 0.1, screenX, screenY, glowRadius);
+            glow.addColorStop(0, `rgba(255, 255, 255, ${0.92 * alpha})`);
+            glow.addColorStop(0.22, `rgba(${tone}, ${0.72 * alpha})`);
+            glow.addColorStop(0.62, `rgba(${tone}, ${0.2 * alpha})`);
+            glow.addColorStop(1, `rgba(${tone}, 0)`);
+            ctx.fillStyle = glow;
+            ctx.beginPath();
+            ctx.arc(screenX, screenY, glowRadius, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = `rgba(255, 255, 255, ${0.88 * alpha})`;
+            ctx.beginPath();
+            ctx.arc(screenX, screenY, Math.max(0.65, radius * 0.48), 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
+      ctx.restore();
+    }
+
+    function drawCloudCapFxCanvas(ctx, ts = animationNow(), visibleRect = visibleBoardRect(0)) {
+      const size = boardSize();
+      const cloudLimit = 720;
+      if (visibleRect.top > cloudLimit || visibleRect.bottom < -120) return;
+      const scale = Math.max(0.2, state.camera.scale || 1);
+      const topFade = clamp((cloudLimit - Math.max(0, visibleRect.top)) / cloudLimit, 0, 1);
+      if (topFade <= 0) return;
+
+      ctx.save();
+      ctx.globalCompositeOperation = "screen";
+      for (let index = 0; index < 42; index += 1) {
+        const seed = state.ambience.cloudSeed + index * 811;
+        const drift = Math.sin(ts * (0.000035 + hashNoise(seed + 3) * 0.00003) + hashNoise(seed + 5) * Math.PI * 2);
+        const x = (hashNoise(seed + 7) * (size.width + 340)) - 170 + drift * (28 + hashNoise(seed + 11) * 42);
+        const heightBias = Math.pow(hashNoise(seed + 13), 1.72);
+        const y = -84 + heightBias * 760 + Math.cos(ts * 0.00004 + index) * 12;
+        if (y > cloudLimit + 140 || y < visibleRect.top - 160 || y > visibleRect.bottom + 160) continue;
+        const edgeFade = 1 - clamp((y - 440) / 300, 0, 0.76);
+        const crownBoost = 1 - clamp(y / 220, 0, 1);
+        const rx = (108 + hashNoise(seed + 17) * 196) / Math.pow(scale, 0.08);
+        const ry = 30 + hashNoise(seed + 19) * 76 + crownBoost * 14;
+        const alpha = (0.12 + hashNoise(seed + 23) * 0.18) * topFade * edgeFade * (0.84 + crownBoost * 0.58);
+        const tone = hashNoise(seed + 29) < 0.46 ? "255, 232, 249" : "211, 247, 255";
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.scale(rx, ry);
+        const fog = ctx.createRadialGradient(0, 0, 0.05, 0, 0, 1);
+        fog.addColorStop(0, `rgba(255, 255, 255, ${alpha * 1.12})`);
+        fog.addColorStop(0.46, `rgba(${tone}, ${alpha})`);
+        fog.addColorStop(1, `rgba(${tone}, 0)`);
+        ctx.fillStyle = fog;
+        ctx.beginPath();
+        ctx.arc(0, 0, 1, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      const veilHeight = 520;
+      const veil = ctx.createLinearGradient(0, -70, 0, veilHeight);
+      veil.addColorStop(0, `rgba(255, 247, 255, ${0.52 * topFade})`);
+      veil.addColorStop(0.18, `rgba(255, 241, 250, ${0.34 * topFade})`);
+      veil.addColorStop(0.5, `rgba(212, 242, 255, ${0.18 * topFade})`);
+      veil.addColorStop(1, "rgba(255, 255, 255, 0)");
+      ctx.fillStyle = veil;
+      ctx.fillRect(-80, -120, size.width + 160, veilHeight + 80);
+
+      const crown = ctx.createLinearGradient(0, -40, 0, 260);
+      crown.addColorStop(0, `rgba(255, 255, 255, ${0.44 * topFade})`);
+      crown.addColorStop(0.52, `rgba(240, 244, 255, ${0.16 * topFade})`);
+      crown.addColorStop(1, "rgba(255, 255, 255, 0)");
+      ctx.fillStyle = crown;
+      ctx.fillRect(-60, -60, size.width + 120, 260);
+      ctx.restore();
+    }
+
+    function drawVisibleSegments(ctx, visibleRect) {
+      const size = boardSize();
+      const segments = boardSegments().filter((segment) => segmentVisible(segment, visibleRect));
+      state.canvas.lastVisibleCounts.segments = segments.length;
+      for (const segment of segments) {
+        const image = canvasImageOrNull(segment?.src);
+        if (!image) {
+          cacheCanvasImage(segment?.src);
+          continue;
+        }
+        const segmentTop = Number(segment.y || 0);
+        const segmentHeight = Math.max(1, Number(segment.h || image.naturalHeight || 1));
+        const drawTop = Math.max(segmentTop, visibleRect.top);
+        const drawBottom = Math.min(segmentTop + segmentHeight, visibleRect.bottom);
+        const drawHeight = drawBottom - drawTop;
+        if (drawHeight <= 0.1) continue;
+        const sourceY = ((drawTop - segmentTop) / segmentHeight) * Math.max(1, image.naturalHeight || segmentHeight);
+        const sourceHeight = (drawHeight / segmentHeight) * Math.max(1, image.naturalHeight || segmentHeight);
+        ctx.drawImage(
+          image,
+          0,
+          sourceY,
+          Math.max(1, image.naturalWidth || size.width),
+          sourceHeight,
+          0,
+          drawTop,
+          size.width,
+          drawHeight
+        );
+      }
+    }
+
+    function boardDecorMotion(blueprint, ts = animationNow()) {
+      const idle = plainObject(blueprint?.idle) ? blueprint.idle : {};
+      const parallax = plainObject(blueprint?.parallax) ? blueprint.parallax : {};
+      const phase = Number(idle.phase || 0);
+      const swayMs = Math.max(1200, Number(idle.swayMs || 5200));
+      const bobMs = Math.max(1200, Number(idle.bobMs || 3600));
+      const swayX = Number(idle.swayX || 0);
+      const bobY = Number(idle.bobY || 0);
+      const restLift = Number(idle.restLift || 0) * Math.max(0.8, state.camera.scale || 1);
+      const swayWave = Math.sin(((ts / swayMs) + phase) * Math.PI * 2);
+      const bobWave = Math.sin(((ts / bobMs) + (phase * 1.7)) * Math.PI * 2);
+      const velocityShiftX = clamp(
+        Number(state.ambience.cameraVelocityX || 0) * Number(parallax.factorX || 0),
+        -Math.abs(Number(parallax.maxX || 0)),
+        Math.abs(Number(parallax.maxX || 0))
+      );
+      const velocityShiftY = clamp(
+        Number(state.ambience.cameraVelocityY || 0) * Number(parallax.factorY || 0),
+        -Math.abs(Number(parallax.maxY || 0)),
+        Math.abs(Number(parallax.maxY || 0))
+      );
+      return {
+        x: velocityShiftX + (swayWave * swayX),
+        y: velocityShiftY - restLift - (((bobWave + 1) * 0.5) * bobY),
+        rotateDeg: (swayWave * 1.4) + clamp(velocityShiftX * 0.08, -1.1, 1.1),
+        shadowAlpha: clamp(0.32 - (((bobWave + 1) * 0.5) * 0.08), 0.14, 0.34),
+        shadowScale: clamp(1 - (((bobWave + 1) * 0.5) * 0.1), 0.86, 1)
+      };
+    }
+
+    function drawBoardDecorCanvas(ctx, ts = animationNow()) {
+      const layers = activeBoardDecorBlueprints();
+      if (!layers.length) return;
+      ctx.save();
+      ctx.setTransform(state.canvas.dpr, 0, 0, state.canvas.dpr, 0, 0);
+      for (const blueprint of layers) {
+        const rect = plainObject(blueprint?.rect) ? blueprint.rect : null;
+        if (!rect) continue;
+        const image = canvasImageOrNull(blueprint?.assetSrc);
+        if (!image) {
+          cacheCanvasImage(blueprint?.assetSrc);
+          continue;
+        }
+        const topLeft = scenePointFromBoardPoint({ x: Number(rect.x || 0), y: Number(rect.y || 0) });
+        if (!topLeft) continue;
+        const width = Math.max(1, Number(rect.width || image.naturalWidth || 1) * state.camera.scale);
+        const height = Math.max(1, Number(rect.height || image.naturalHeight || 1) * state.camera.scale);
+        const motion = boardDecorMotion(blueprint, ts);
+        const drawX = topLeft.x + motion.x;
+        const drawY = topLeft.y + motion.y;
+        const offscreenPadding = Math.max(width, height) * 0.22;
+        if (
+          drawX + width < -offscreenPadding
+          || drawY + height < -offscreenPadding
+          || drawX > state.canvas.viewportWidth + offscreenPadding
+          || drawY > state.canvas.viewportHeight + offscreenPadding
+        ) {
+          continue;
+        }
+
+        const shadowCenterX = drawX + (width * 0.5) + (motion.x * 0.08);
+        const shadowCenterY = drawY + height - (10 * Math.max(0.75, state.camera.scale));
+        ctx.save();
+        ctx.globalAlpha = motion.shadowAlpha;
+        ctx.translate(shadowCenterX, shadowCenterY);
+        ctx.scale(motion.shadowScale, 0.46 * motion.shadowScale);
+        const shadowGradient = ctx.createRadialGradient(0, 0, width * 0.06, 0, 0, width * 0.34);
+        shadowGradient.addColorStop(0, "rgba(14, 10, 34, 0.5)");
+        shadowGradient.addColorStop(1, "rgba(14, 10, 34, 0)");
+        ctx.fillStyle = shadowGradient;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, width * 0.34, Math.max(8, height * 0.075), 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        ctx.save();
+        ctx.translate(drawX + (width * 0.5), drawY + (height * 0.54));
+        ctx.rotate((motion.rotateDeg * Math.PI) / 180);
+        ctx.translate(-(width * 0.5), -(height * 0.54));
+        ctx.shadowColor = "rgba(126, 104, 255, 0.34)";
+        ctx.shadowBlur = Math.max(8, 16 * Math.max(0.75, state.camera.scale));
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = Math.max(4, 8 * Math.max(0.75, state.camera.scale));
+        ctx.drawImage(image, 0, 0, image.naturalWidth || Number(rect.width || 1), image.naturalHeight || Number(rect.height || 1), 0, 0, width, height);
+        ctx.restore();
+      }
+      ctx.restore();
+    }
+
+    // MILEAGE_VIEWPORT_RENDER: draw only visible segments and visible entities into the viewport canvas.
+    function renderBoardCanvas(ts = animationNow()) {
+      if (!boardCtx || !state.board || !state.boardReady) return;
+      syncBoardCanvasSize();
+      const visibleRect = visibleBoardRect(120);
+      state.canvas.lastVisibleRect = visibleRect;
+      boardCtx.setTransform(1, 0, 0, 1, 0, 0);
+      boardCtx.clearRect(0, 0, boardCanvas.width, boardCanvas.height);
+      boardCtx.fillStyle = "#04070f";
+      boardCtx.fillRect(0, 0, boardCanvas.width, boardCanvas.height);
+      boardCtx.setTransform(
+        state.canvas.dpr * state.camera.scale,
+        0,
+        0,
+        state.canvas.dpr * state.camera.scale,
+        state.canvas.dpr * state.camera.x,
+        state.canvas.dpr * state.camera.y
+      );
+      updateAmbienceCameraState(ts);
+      updateSelfFx(ts);
+      drawVisibleSegments(boardCtx, visibleRect);
+      drawSelfGroundFxCanvas(boardCtx, ts, visibleRect);
+      drawPlayerLayerCanvas(boardCtx, visibleRect);
+      drawStepLayerCanvas(boardCtx, visibleRect);
+      drawPlayerClusterChipLayerCanvas(boardCtx);
+      drawRewardLayerCanvas(boardCtx, visibleRect, ts);
+      drawSpriteLayerCanvas(boardCtx, visibleRect, ts);
+      drawCloudCapFxCanvas(boardCtx, ts, visibleRect);
+      drawAmbientOrbFxCanvas(boardCtx, ts, visibleRect);
+      drawSelfParticleFxCanvas(boardCtx, ts);
+      drawSelfLayerCanvas(boardCtx, ts);
+      boardCtx.setTransform(1, 0, 0, 1, 0, 0);
+      drawBoardDecorCanvas(boardCtx, ts);
+      drawDebugOverlay(boardCtx);
+    }
+
+    function renderBoardTrack() {
+      syncBoardCanvasSize();
+      boardTrack.innerHTML = "";
+      stepLayer.innerHTML = "";
+      rewardLayer.innerHTML = "";
+      spriteLayer.innerHTML = "";
+      playerLayer.innerHTML = "";
+      selfLayer.innerHTML = "";
+      boardShell.classList.toggle("is-hidden", boardSegments().length === 0);
+      rebuildRenderIndex();
+    }
+
+    async function waitForBoardImagesReady() {
+      const managedEntries = await listManagedMileagePreloads();
+      const entries = [
+        ...boardSegments().map((segment) => cacheCanvasImage(segment?.src)),
+        ...(Array.isArray(state.board?.sprites) ? state.board.sprites.map((sprite) => cacheCanvasImage(sprite?.src)) : []),
+        ...(Array.isArray(state.board?.iconTemplates) ? state.board.iconTemplates.map((template) => cacheCanvasImage(template?.src)) : []),
+        ...activeBoardDecorBlueprints().map((decor) => cacheCanvasImage(decor?.assetSrc)),
+        ...managedEntries.map((entry) => cacheCanvasImage(entry?.originalSrc || entry?.canonicalPath || entry?.url || ""))
+      ].filter(Boolean);
+      if (entries.length === 0) {
         return Promise.resolve();
       }
-      return Promise.all(images.map((image) => new Promise((resolve) => {
-        if (image.complete) {
-          resolve(null);
-          return;
-        }
-        image.addEventListener("load", () => resolve(null), { once: true });
-        image.addEventListener("error", () => resolve(null), { once: true });
-      })));
+      return Promise.all(entries.map((entry) => entry.promise));
+    }
+
+    function drawDebugOverlay(ctx) {
+      if (!state.debug.enabled || !state.canvas.lastVisibleRect) return;
+      const rect = state.canvas.lastVisibleRect;
+      const counts = state.canvas.lastVisibleCounts;
+      ctx.save();
+      ctx.setTransform(state.canvas.dpr, 0, 0, state.canvas.dpr, 0, 0);
+      ctx.fillStyle = "rgba(7, 12, 28, 0.84)";
+      ctx.strokeStyle = "rgba(143, 245, 255, 0.34)";
+      ctx.lineWidth = 1;
+      traceRoundedRect(ctx, 14, 14, 270, 86, 16);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = "#dff8ff";
+      ctx.font = "600 12px var(--font), system-ui, sans-serif";
+      ctx.textBaseline = "top";
+      ctx.fillText(`debug visible: x ${rect.left.toFixed(0)}..${rect.right.toFixed(0)} y ${rect.top.toFixed(0)}..${rect.bottom.toFixed(0)}`, 26, 28);
+      ctx.fillText(`segments ${counts.segments} • steps ${counts.steps} • rewards ${counts.rewards}`, 26, 48);
+      ctx.fillText(`sprites ${counts.sprites} • players ${counts.players} • dpr ${state.canvas.dpr.toFixed(2)}`, 26, 68);
+      ctx.restore();
     }
 
     function renderRewardLayer() {
-      const rewards = Array.isArray(state.board?.rewards) ? state.board.rewards : [];
-      const reachedStep = Number(state.bootstrap?.summary?.positionStep ?? -1);
-      const canClaim = !state.bootstrap?.requiresLogin;
-      const claimedRewardIds = state.claimedRewardIds;
-      const recentClaimedRewardIds = state.recentClaimedRewardIds;
-      rewardLayer.innerHTML = rewards.map((reward) => {
-        const point = rewardPoint(reward);
-        const pos = pointToPercent(point);
-        if (!pos) return "";
-        const rewardId = String(reward.id || "").trim();
-        const stepIndex = Number.isInteger(reward.stepIndex) ? Number(reward.stepIndex) : -1;
-        const claimed = rewardId !== "" && claimedRewardIds.has(rewardId);
-        const unlocked = canClaim && stepIndex >= 0 && reachedStep >= stepIndex && !claimed;
-        const justClaimed = rewardId !== "" && recentClaimedRewardIds.has(rewardId);
-        const stateClass = claimed ? "is-claimed" : (unlocked ? "is-unlocked" : "is-locked");
-        const title = claimed
-          ? "รับรางวัลจุดนี้แล้ว"
-          : (unlocked ? "กดรับรางวัลที่ปลดล็อกแล้ว" : "รางวัลจะปลดล็อกเมื่อเดินถึงช่องนี้");
-        return `
-          <div
-            class="reward-marker is-${escapeHtml(reward.kind || "coin")} ${stateClass}${justClaimed ? " is-just-claimed" : ""}"
-            data-reward-id="${escapeHtml(rewardId)}"
-            data-reward-step-index="${stepIndex}"
-            style="left:${pos.x}%; top:${pos.y}%; --reward-marker-size:${rewardMarkerSize(reward)}px;"
-            title="${escapeHtml(title)}"
-          >
-            ${rewardMarkerInnerMarkup(reward, claimed)}
-          </div>
-        `;
-      }).join("");
+      rewardLayer.innerHTML = "";
     }
 
     function spriteBackgroundPosition(sprite, frame) {
@@ -2351,11 +4471,14 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
       return `${x.toFixed(4)}% ${y.toFixed(4)}%`;
     }
 
-    function spriteFrameIndex(sprite, ts = performance.now()) {
+    function spriteFrameIndex(sprite, ts = animationNow()) {
       const frameCount = Math.max(1, Number(sprite?.frameCount || 1));
       const fps = Math.max(1, Number(sprite?.fps || 12));
       const frame = Math.floor((ts / 1000) * fps);
       const mode = String(sprite?.mode || "loop");
+      if (mode === "static") {
+        return Math.max(0, Math.min(frameCount - 1, Math.round(Number(sprite?.frameIndex || 0))));
+      }
       if (mode === "once") {
         return Math.min(frameCount - 1, frame);
       }
@@ -2368,78 +4491,15 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
     }
 
     function renderSpriteLayer() {
-      const sprites = Array.isArray(state.board?.sprites) ? state.board.sprites : [];
-      spriteLayer.innerHTML = sprites.map((sprite, index) => {
-        const point = spritePoint(sprite);
-        const pos = pointToPercent(point);
-        const src = String(sprite.src || "").trim();
-        if (!pos || src === "") return "";
-        const safeSrc = escapeCssUrl(src);
-        const columns = Math.max(1, Number(sprite.columns || 1));
-        const rows = Math.max(1, Number(sprite.rows || 1));
-        const width = Math.max(1, Number(sprite.width || 48));
-        const height = Math.max(1, Number(sprite.height || 48));
-        return `
-          <div
-            class="sprite-marker"
-            data-sprite-index="${index}"
-            style="left:${pos.x}%; top:${pos.y}%; width:${width}px; height:${height}px; background-image:url('${safeSrc}'); background-size:${columns * 100}% ${rows * 100}%;"
-            title="${escapeHtml(sprite.label || sprite.id || "sprite")}"
-          ></div>
-        `;
-      }).join("");
-      updateSpriteLayer();
+      spriteLayer.innerHTML = "";
     }
 
-    function updateSpriteLayer(ts = performance.now()) {
-      if (!spriteLayer || !state.board?.sprites?.length) return;
-      for (const node of spriteLayer.querySelectorAll("[data-sprite-index]")) {
-        const index = Number(node.dataset.spriteIndex || -1);
-        const sprite = state.board.sprites[index];
-        if (!sprite) continue;
-        const frame = spriteFrameIndex(sprite, ts);
-        node.style.backgroundPosition = spriteBackgroundPosition(sprite, frame);
-      }
+    function updateSpriteLayer(ts = animationNow()) {
+      return;
     }
 
     function renderStepLayer() {
-      const steps = Array.isArray(state.board?.steps) ? state.board.steps : [];
-      const groups = new Map();
-      steps.forEach((step, index) => {
-        const point = boardPointFromStep(index);
-        if (!point) return;
-        const key = `${Math.round(point.x * 10) / 10}:${Math.round(point.y * 10) / 10}`;
-        if (!groups.has(key)) {
-          groups.set(key, { point, indexes: [] });
-        }
-        groups.get(key).indexes.push(index);
-      });
-      stepLayer.innerHTML = Array.from(groups.values()).map((group) => {
-        const firstIndex = group.indexes[0] || 0;
-        const { offsetX, offsetY } = stepBadgeOffset(group.point, firstIndex);
-        const pos = pointToPercent(group.point, offsetX, offsetY);
-        if (!pos) return "";
-        if (group.indexes.length > 1) {
-          return `
-            <div
-              class="step-badge is-stack"
-              style="left:${pos.x}%; top:${pos.y}%;"
-              title="ช่อง ${group.indexes.map((index) => index + 1).join(", ")}"
-            >
-              ${group.indexes.map((index) => `<span>${index + 1}</span>`).join("")}
-            </div>
-          `;
-        }
-        return `
-          <div
-            class="step-badge"
-            style="left:${pos.x}%; top:${pos.y}%; --step-badge-size:${markerStyle.stepBadgeSize}px;"
-            title="ช่อง ${firstIndex + 1}"
-          >
-            ${firstIndex + 1}
-          </div>
-        `;
-      }).join("");
+      stepLayer.innerHTML = "";
     }
 
     function clusterPlayers() {
@@ -2459,47 +4519,156 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
     }
 
     function renderPlayerLayer() {
-      const nodes = [];
-      const groups = clusterPlayers();
-      for (const [stepKey, players] of groups.entries()) {
-        const point = stepKey === "__entry__"
-          ? boardEntryPoint()
-          : boardPointFromStep(Number(stepKey));
-        if (!point) continue;
+      playerLayer.innerHTML = "";
+    }
 
-        players.slice(0, 3).forEach((player, index) => {
-          const angle = (Math.PI * 2 * index) / Math.max(1, Math.min(players.length, 3));
-          const offset = players.length > 1 ? markerStyle.clusterOffset : 0;
-          nodes.push(avatarMarkerMarkup(player, point, {
-            size: markerStyle.otherSize,
-            liftPx: markerStyle.otherLift,
-            offsetX: Math.cos(angle) * offset,
-            offsetY: Math.sin(angle) * offset
-          }));
-        });
-
-        if (players.length > 3) {
-          const pos = pointToPercent(
-            point,
-            markerStyle.clusterOffset + 8,
-            -markerStyle.clusterLift
-          );
-          if (pos) {
-            nodes.push(`
-              <div class="cluster-badge" style="left:${pos.x}%; top:${pos.y}%;">
-                +${players.length - 3}
-              </div>
-            `);
-          }
+    function debugRewardCountInRange(summary) {
+      const reachedStep = Number(summary?.positionStep ?? -1);
+      const claimed = new Set(Array.isArray(summary?.claimedRewardIds) ? summary.claimedRewardIds.map((value) => String(value || "")) : []);
+      let count = 0;
+      for (const reward of Array.isArray(state.board?.rewards) ? state.board.rewards : []) {
+        const rewardId = String(reward?.id || "");
+        const stepIndex = Number.isInteger(reward?.stepIndex) ? Number(reward.stepIndex) : -1;
+        if (rewardId && claimed.has(rewardId)) continue;
+        if (stepIndex >= 0 && reachedStep >= stepIndex) {
+          count += 1;
         }
       }
-      playerLayer.innerHTML = nodes.join("");
+      return count;
+    }
+
+    function buildDebugPlayers(count, focusStep) {
+      const players = [];
+      const maxIndex = Math.max(-1, Number(state.board?.steps?.length || 0) - 1);
+      if (count <= 0 || maxIndex < 0) return players;
+      const spread = Math.max(10, Math.min(48, maxIndex + 1));
+      for (let index = 0; index < count; index += 1) {
+        let positionStep = ((maxIndex - ((index * 5) % spread)) + spread) % spread;
+        if (index % 7 === 0) {
+          positionStep = clamp(focusStep, -1, maxIndex);
+        }
+        players.push({
+          userId: `debug-player-${index + 1}`,
+          displayName: `Debug ${String.fromCharCode(65 + (index % 26))}${index + 1}`,
+          avatarUrl: "",
+          positionStep,
+          lifetimeSteps: Math.max(0, positionStep + 1),
+        });
+      }
+      return players;
+    }
+
+    function applyDebugConfigToBootstrap(inputBootstrap) {
+      if (!state.debug.enabled || !inputBootstrap?.board) {
+        return inputBootstrap;
+      }
+      const bootstrap = cloneJson(inputBootstrap);
+      const maxIndex = Math.max(-1, Number(bootstrap.board?.steps?.length || 0) - 1);
+      const summary = plainObject(bootstrap.summary) ? bootstrap.summary : {};
+      const baselineStart = typeof summary.lastAnimatedStep === "number" ? summary.lastAnimatedStep : -1;
+      const requestedStart = Number.isFinite(state.debug.start) ? state.debug.start : baselineStart;
+      const startStep = clamp(Math.trunc(requestedStart), -1, maxIndex);
+      const targetStep = clamp(startStep + Math.max(0, state.debug.steps), -1, maxIndex);
+      const pendingSteps = state.debug.walk ? Math.max(0, targetStep - startStep) : 0;
+      const claimedRewardIds = Array.isArray(summary.claimedRewardIds) ? summary.claimedRewardIds.slice() : [];
+
+      bootstrap.requiresLogin = false;
+      bootstrap.serviceUnavailable = false;
+      bootstrap.summary = {
+        ...summary,
+        boardCode: bootstrap.board?.boardCode || summary.boardCode || initialBoardCode,
+        lifetimeSteps: Math.max(Number(summary.lifetimeSteps || 0), targetStep + 1),
+        positionStep: targetStep,
+        lastAnimatedStep: state.debug.walk ? startStep : targetStep,
+        pendingSteps,
+        pendingWalkCount: pendingSteps,
+        badgeCount: pendingSteps,
+        finished: maxIndex >= 0 && targetStep >= maxIndex,
+        claimableRewardCount: 0,
+        claimedRewardIds,
+        requiresLogin: false,
+      };
+      bootstrap.summary.claimableRewardCount = debugRewardCountInRange(bootstrap.summary);
+      bootstrap.progress = {
+        lifetimeSteps: bootstrap.summary.lifetimeSteps,
+        positionStep: bootstrap.summary.positionStep,
+        lastAnimatedStep: bootstrap.summary.lastAnimatedStep,
+        finished: bootstrap.summary.finished,
+      };
+      bootstrap.pending = {
+        startStepIndex: pendingSteps > 0 ? startStep + 1 : null,
+        endStepIndex: pendingSteps > 0 ? targetStep : null,
+        previewRewards: [],
+      };
+      bootstrap.self = bootstrap.self || {
+        userId: "debug-self",
+        displayName: "Debug Self",
+        avatarUrl: "",
+        lifetimeSteps: 0,
+        positionStep: -1,
+      };
+      bootstrap.self.userId = String(bootstrap.self.userId || "debug-self");
+      bootstrap.self.displayName = String(bootstrap.self.displayName || "Debug Self");
+      bootstrap.self.positionStep = targetStep;
+      bootstrap.self.lifetimeSteps = bootstrap.summary.lifetimeSteps;
+      if (state.debug.friends > 0) {
+        bootstrap.players = buildDebugPlayers(state.debug.friends, targetStep);
+      } else if (!Array.isArray(bootstrap.players)) {
+        bootstrap.players = [];
+      }
+      return bootstrap;
+    }
+
+    function focusForDebugZone() {
+      const zone = state.debug.cityZone;
+      if (!zone) return false;
+      if (zone === "start" || zone === "lower") {
+        const point = boardEntryPoint() || boardPointFromStep(0);
+        if (point) {
+          setCameraToPoint(point, { scale: state.camera.walkScale, alignY: 0.7, immediate: true });
+          return true;
+        }
+      }
+      if (zone === "top") {
+        const point = boardPointFromStep(Math.max(0, (state.board?.steps?.length || 1) - 1));
+        if (point) {
+          setCameraToPoint(point, { scale: state.camera.detailScale, alignY: 0.62, immediate: true });
+          return true;
+        }
+      }
+      return false;
     }
 
     function leaderboardRows() {
       const leaderboard = state.bootstrap?.leaderboard || {};
       const tab = state.leaderboardTab === "weekly" ? "weekly" : "all";
       return Array.isArray(leaderboard[tab]) ? leaderboard[tab] : [];
+    }
+
+    function selfUserId() {
+      return String(state.bootstrap?.self?.userId || "").trim();
+    }
+
+    function isSelfPlayer(player) {
+      const target = selfUserId();
+      return target !== "" && String(player?.userId || "").trim() === target;
+    }
+
+    function leaderboardRowsForDisplay(rows) {
+      const list = Array.isArray(rows) ? rows : [];
+      const target = selfUserId();
+      if (!target || list.length <= 50) {
+        return list.map((player) => ({ type: "player", player }));
+      }
+      const selfIndex = list.findIndex((player) => String(player?.userId || "").trim() === target);
+      if (selfIndex < 0 || selfIndex < 50) {
+        return list.slice(0, 50).map((player) => ({ type: "player", player }));
+      }
+      return [
+        ...list.slice(0, 50).map((player) => ({ type: "player", player })),
+        { type: "divider" },
+        { type: "player", player: list[selfIndex] }
+      ];
     }
 
     function findPlayerByUserId(userId) {
@@ -2509,6 +4678,7 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
       if (self && String(self.userId || "") === target) return self;
       return (state.bootstrap?.players || []).find((player) => String(player.userId || "") === target)
         || leaderboardRows().find((player) => String(player.userId || "") === target)
+        || (state.stepPlayersPanel.players || []).find((player) => String(player.userId || "") === target)
         || null;
     }
 
@@ -2529,6 +4699,7 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
 
     function renderLeaderboard() {
       const rows = leaderboardRows();
+      const displayRows = leaderboardRowsForDisplay(rows);
       const tab = state.leaderboardTab === "weekly" ? "weekly" : "all";
       if (leaderboardTitle) {
         leaderboardTitle.textContent = tab === "weekly" ? "Rank สัปดาห์" : "Rank ทั้งหมด";
@@ -2541,16 +4712,21 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
       });
       if (!leaderboardList) return;
       if (rows.length === 0) {
-        leaderboardList.innerHTML = `<div class="pill">ยังไม่มีคนเดินอย่างน้อย 1 ช่อง</div>`;
+        leaderboardList.innerHTML = `<div class="leaderboard-empty">ยังไม่มีคนเดินอย่างน้อย 1 ช่อง</div>`;
         return;
       }
-      leaderboardList.innerHTML = rows.map((player, index) => {
+      leaderboardList.innerHTML = displayRows.map((entry, index) => {
+        if (entry.type === "divider") {
+          return `<div class="leaderboard-divider">อันดับของคุณ</div>`;
+        }
+        const player = entry.player;
         const avatarUrl = String(player.avatarUrl || "");
         const displayName = String(player.displayName || "Player");
         const score = Number(tab === "weekly" ? player.weeklySteps : player.lifetimeSteps) || Number(player.score || 0);
-        const stepText = Number(player.positionStep || -1) >= 0 ? `ช่อง ${Number(player.positionStep) + 1}` : "ยังอยู่จุดเริ่ม";
+        const stepText = Number(player.positionStep || -1) >= 0 ? `ช่อง ${stepDisplayNumber(player.positionStep)}` : "ยังอยู่จุดเริ่ม";
+        const selfClass = isSelfPlayer(player) ? " is-self" : "";
         return `
-          <button class="leaderboard-row" type="button" data-rank-user-id="${escapeHtml(player.userId || "")}">
+          <button class="leaderboard-row${selfClass}" type="button" data-rank-user-id="${escapeHtml(player.userId || "")}">
             <span class="leaderboard-rank">#${Number(player.rank || index + 1)}</span>
             <span class="leaderboard-avatar">${avatarUrl ? `<img src="${escapeHtml(avatarUrl)}" alt="" loading="lazy" decoding="async" />` : escapeHtml(playerInitial(player))}</span>
             <span class="leaderboard-name">
@@ -2563,12 +4739,22 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
       }).join("");
     }
 
+    function scrollLeaderboardToSelf() {
+      if (!leaderboardList) return;
+      const selfRow = leaderboardList.querySelector(".leaderboard-row.is-self");
+      if (!selfRow) return;
+      window.setTimeout(() => {
+        selfRow.scrollIntoView({ block: "center", inline: "nearest" });
+      }, 60);
+    }
+
     async function refreshLeaderboard() {
       try {
         const data = await fetchMileageJson("leaderboard");
         if (data?.leaderboard) {
           state.bootstrap.leaderboard = data.leaderboard;
           renderLeaderboard();
+          scrollLeaderboardToSelf();
         }
       } catch (error) {
         console.warn("Mileage leaderboard failed:", error);
@@ -2577,39 +4763,184 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
 
     function openLeaderboard() {
       state.leaderboardOpen = true;
+      closeStepPlayersPanel(false);
       leaderboardPanel.classList.remove("is-hidden");
       leaderboardPanel.setAttribute("aria-hidden", "false");
+      syncMileageOverlayChrome();
       renderLeaderboard();
+      scrollLeaderboardToSelf();
+      postMileageUiStateToParent();
       void refreshLeaderboard();
     }
 
-    function closeLeaderboard() {
+    function closeLeaderboard(postState = true) {
       state.leaderboardOpen = false;
       leaderboardPanel.classList.add("is-hidden");
       leaderboardPanel.setAttribute("aria-hidden", "true");
+      syncMileageOverlayChrome();
+      if (postState) {
+        postMileageUiStateToParent();
+      }
     }
 
-    function renderSelfLayer(ts = performance.now()) {
-      const selfPlayer = state.bootstrap?.self || null;
-      const point = currentSelfPoint();
-      if (!selfPlayer || !point) {
-        selfLayer.innerHTML = "";
+    function renderStepPlayersPanel() {
+      if (!stepPlayersPanel || !stepPlayersList || !stepPlayersTitle || !stepPlayersCount) return;
+      const stepIndex = Number(state.stepPlayersPanel.stepIndex ?? -1);
+      const players = Array.isArray(state.stepPlayersPanel.players) ? state.stepPlayersPanel.players : [];
+      stepPlayersTitle.textContent = stepIndex >= 0 ? `ช่อง ${stepDisplayNumber(stepIndex)}` : "ผู้เล่นในช่อง";
+      stepPlayersCount.textContent = state.stepPlayersPanel.loading
+        ? "กำลังโหลด..."
+        : `${players.length.toLocaleString()} คน`;
+      if (state.stepPlayersPanel.loading) {
+        stepPlayersList.innerHTML = `<div class="leaderboard-empty">กำลังโหลดรายชื่อ</div>`;
         return;
       }
-      const liftPx = state.walk.active
-        ? state.walk.visualLiftPx
-        : markerStyle.selfLift + Math.sin(ts / 360) * 2;
-      const scaleX = state.walk.active ? state.walk.visualScaleX : 1;
-      const scaleY = state.walk.active ? state.walk.visualScaleY : 1;
-      const rotateDeg = state.walk.active ? state.walk.visualTiltDeg : Math.sin(ts / 520) * 0.8;
-      selfLayer.innerHTML = `${walkGroundEffectMarkup(point)}${avatarMarkerMarkup(selfPlayer, point, {
-        size: markerStyle.selfSize,
-        liftPx,
-        self: true,
-        scaleX,
-        scaleY,
-        rotateDeg
-      })}`;
+      if (players.length === 0) {
+        stepPlayersList.innerHTML = `<div class="leaderboard-empty">ยังไม่เจอรายชื่อในช่องนี้</div>`;
+        return;
+      }
+      stepPlayersList.innerHTML = players.map((player) => {
+        const avatarUrl = String(player.avatarUrl || "");
+        const displayName = String(player.displayName || "Player");
+        const score = Number(player.lifetimeSteps || player.score || 0);
+        const selfClass = isSelfPlayer(player) ? " is-self" : "";
+        return `
+          <button class="leaderboard-row${selfClass}" type="button" data-step-user-id="${escapeHtml(player.userId || "")}">
+            <span class="leaderboard-rank">#</span>
+            <span class="leaderboard-avatar">${avatarUrl ? `<img src="${escapeHtml(avatarUrl)}" alt="" loading="lazy" decoding="async" />` : escapeHtml(playerInitial(player))}</span>
+            <span class="leaderboard-name">
+              <strong>${escapeHtml(displayName)}</strong>
+              <small>${escapeHtml(score > 0 ? `${score.toLocaleString()} ช่องสะสม` : "อยู่จุดเริ่ม")}</small>
+            </span>
+            <span class="leaderboard-score">ดู</span>
+          </button>
+        `;
+      }).join("");
+    }
+
+    function debugPlayersForStep(stepIndex) {
+      return (state.bootstrap?.players || [])
+        .filter((player) => Number(player?.positionStep ?? -1) === Number(stepIndex));
+    }
+
+    async function openStepPlayersPanel(stepIndex) {
+      const targetStep = Number(stepIndex);
+      if (!Number.isInteger(targetStep) || targetStep < 0) return;
+      closeLeaderboard(false);
+      state.stepPlayersPanel.open = true;
+      state.stepPlayersPanel.stepIndex = targetStep;
+      state.stepPlayersPanel.loading = true;
+      state.stepPlayersPanel.players = state.debug.enabled ? debugPlayersForStep(targetStep) : [];
+      stepPlayersPanel.classList.remove("is-hidden");
+      stepPlayersPanel.setAttribute("aria-hidden", "false");
+      syncMileageOverlayChrome();
+      renderStepPlayersPanel();
+      postMileageUiStateToParent();
+      if (state.debug.enabled) {
+        state.stepPlayersPanel.loading = false;
+        renderStepPlayersPanel();
+        return;
+      }
+      try {
+        const data = await fetchMileageJson("step_players", { stepIndex: targetStep });
+        state.stepPlayersPanel.players = Array.isArray(data.players) ? data.players : [];
+      } catch (error) {
+        console.warn("Mileage step players failed:", error);
+        state.stepPlayersPanel.players = [];
+        showToast("โหลดรายชื่อช่องนี้ไม่สำเร็จ");
+      } finally {
+        state.stepPlayersPanel.loading = false;
+        renderStepPlayersPanel();
+      }
+    }
+
+    function closeStepPlayersPanel(postState = true) {
+      state.stepPlayersPanel.open = false;
+      if (stepPlayersPanel) {
+        stepPlayersPanel.classList.add("is-hidden");
+        stepPlayersPanel.setAttribute("aria-hidden", "true");
+      }
+      syncMileageOverlayChrome();
+      if (postState) {
+        postMileageUiStateToParent();
+      }
+    }
+
+    function renderSelfLayer(ts = animationNow()) {
+      selfLayer.innerHTML = "";
+    }
+
+    function rewardAtViewportClient(clientX, clientY) {
+      const rewards = Array.isArray(state.board?.rewards) ? state.board.rewards : [];
+      if (!rewards.length) return null;
+      const boardPoint = viewportPointToBoard(clientX, clientY);
+      let best = null;
+      for (const reward of rewards) {
+        const point = rewardPoint(reward);
+        if (!point) continue;
+        const radius = rewardMarkerSize(reward) * 0.58;
+        const dx = boardPoint.x - point.x;
+        const dy = boardPoint.y - point.y;
+        const distanceSq = (dx * dx) + (dy * dy);
+        if (distanceSq > radius * radius) continue;
+        if (!best || distanceSq < best.distanceSq) {
+          best = { reward, point, distanceSq };
+        }
+      }
+      return best;
+    }
+
+    function playerClusterAtViewportClient(clientX, clientY) {
+      const boardPoint = viewportPointToBoard(clientX, clientY);
+      let best = null;
+      for (const target of state.canvas.playerClusterTargets || []) {
+        const dx = boardPoint.x - Number(target.x || 0);
+        const dy = boardPoint.y - Number(target.y || 0);
+        const radius = Math.max(16, Number(target.radius || 18));
+        const distanceSq = (dx * dx) + (dy * dy);
+        if (distanceSq > radius * radius) continue;
+        if (!best || distanceSq < best.distanceSq) {
+          best = { ...target, distanceSq };
+        }
+      }
+      return best;
+    }
+
+    function activatePlayerClusterDetail(clientX, clientY) {
+      const hit = playerClusterAtViewportClient(clientX, clientY);
+      if (!hit) return false;
+      void openStepPlayersPanel(Number(hit.stepIndex));
+      return true;
+    }
+
+    function activateCanvasReward(clientX, clientY) {
+      const hit = rewardAtViewportClient(clientX, clientY);
+      if (!hit) return false;
+      if (state.bootstrap?.requiresLogin) {
+        showToast("Sign in Discord ก่อนเพื่อรับรางวัล");
+        syncLoginButton(true);
+        return true;
+      }
+      const rewardId = String(hit.reward.id || "").trim();
+      const stepIndex = Number.isInteger(hit.reward.stepIndex) ? Number(hit.reward.stepIndex) : -1;
+      const reachedStep = Number(state.bootstrap?.summary?.positionStep ?? -1);
+      const claimed = rewardId !== "" && state.claimedRewardIds.has(rewardId);
+      if (claimed) {
+        showToast("รับรางวัลจุดนี้แล้ว");
+        return true;
+      }
+      if (!Number.isFinite(stepIndex) || stepIndex < 0 || reachedStep < stepIndex) {
+        showToast("เดินถึงช่องนี้ก่อน แล้วค่อยกลับมากดรับ");
+        return true;
+      }
+      if (!state.walk.pendingClaim) {
+        state.walk.pendingClaim = true;
+        void claimPendingRewards({
+          quietEmpty: false,
+          sourcePoint: viewportPointFromBoardPoint(hit.point)
+        });
+      }
+      return true;
     }
 
     function resetWalkPose() {
@@ -2617,6 +4948,8 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
       state.walk.visualScaleX = 1;
       state.walk.visualScaleY = 1;
       state.walk.visualTiltDeg = 0;
+      state.walk.visualOffsetX = 0;
+      state.walk.visualOffsetY = 0;
     }
 
     function walkRemainingSteps(fromValue = state.walk.segmentFromValue) {
@@ -2639,25 +4972,46 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
       return summaryPendingWalkSteps();
     }
 
+    function walkSegmentPoints(fromValue, toValue) {
+      const fromPoint = pathPointForValue(fromValue);
+      const toPoint = pathPointForValue(toValue);
+      const dx = Number(toPoint?.x || 0) - Number(fromPoint?.x || 0);
+      const dy = Number(toPoint?.y || 0) - Number(fromPoint?.y || 0);
+      const distance = Math.max(1, Math.hypot(dx, dy));
+      return {
+        fromPoint,
+        toPoint,
+        dx,
+        dy,
+        distance,
+        tangentX: dx / distance,
+        tangentY: dy / distance,
+        normalX: -dy / distance,
+        normalY: dx / distance,
+        tiltDirection: dx === 0 ? 1 : Math.sign(dx)
+      };
+    }
+
     function walkSegmentDurationMs(fromValue) {
-      const remainingSteps = walkRemainingSteps(fromValue);
-      const baseDuration = state.walk.boost
-        ? 210 - ((remainingSteps - 1) * 8)
-        : 560 - ((remainingSteps - 1) * 10);
-      const clampedDuration = state.walk.boost
-        ? clamp(baseDuration, 110, 210)
-        : clamp(baseDuration, 360, 560);
-      return fromValue < 0 && !state.walk.boost ? clampedDuration + 40 : clampedDuration;
+      const nextValue = Math.min(state.walk.toValue, fromValue + 1);
+      const { distance } = walkSegmentPoints(fromValue, nextValue);
+      const distanceT = clamp((distance - 24) / 72, 0, 1);
+      const duration = state.walk.boost
+        ? lerp(150, 230, distanceT)
+        : lerp(500, 620, distanceT);
+      const adjusted = fromValue < 0 && !state.walk.boost ? duration + 44 : duration;
+      const previewSpeed = state.preview.enabled
+        ? clamp(Number(state.preview.simulation?.speed || 1), 0.25, 3)
+        : 1;
+      return adjusted / previewSpeed;
     }
 
     function walkSegmentHopHeight(fromValue, toValue) {
-      const fromPoint = pathPointForValue(fromValue);
-      const toPoint = pathPointForValue(toValue);
+      const { fromPoint, toPoint, distance } = walkSegmentPoints(fromValue, toValue);
       if (!fromPoint || !toPoint) {
         return state.walk.boost ? 22 : 28;
       }
-      const distance = Math.hypot(toPoint.x - fromPoint.x, toPoint.y - fromPoint.y);
-      const height = clamp(distance * 0.22, 24, 42);
+      const height = clamp(distance * 0.34, 28, 52);
       return state.walk.boost ? height * 0.78 : height;
     }
 
@@ -2668,31 +5022,41 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
       return deltaX === 0 ? 1 : Math.sign(deltaX);
     }
 
-    function sampleWalkSegment(progress, fromValue, toValue) {
+    function samplePremiumWalkSegment(progress, fromValue, toValue) {
       const p = clamp(progress, 0, 1);
-      const windupEnd = 0.16;
-      const movePhase = p <= windupEnd
-        ? 0
-        : easeInOutCubic((p - windupEnd) / (1 - windupEnd));
+      const kinematics = walkSegmentPoints(fromValue, toValue);
+      const windupEnd = 0.13;
+      const moveRaw = clamp((p - 0.09) / 0.78, 0, 1);
+      const movePhase = moveRaw < 0.42
+        ? 0.68 * easeOutQuart(moveRaw / 0.42)
+        : 0.68 + (0.32 * easeInOutSine((moveRaw - 0.42) / 0.58));
       const hopHeight = walkSegmentHopHeight(fromValue, toValue);
       const hop = Math.sin(movePhase * Math.PI);
       const windup = p < windupEnd ? easeOutCubic(p / windupEnd) : 0;
-      const landingT = p > 0.74 ? (p - 0.74) / 0.26 : 0;
+      const launchT = p > 0.09 && p < 0.32 ? (p - 0.09) / 0.23 : 0;
+      const launchStretch = launchT > 0 ? Math.sin(clamp(launchT, 0, 1) * Math.PI) : 0;
+      const landingT = p > 0.73 && p < 0.92 ? (p - 0.73) / 0.19 : 0;
       const landingSquash = landingT > 0 ? Math.sin(clamp(landingT, 0, 1) * Math.PI) : 0;
-      const reboundT = p > 0.84 ? (p - 0.84) / 0.16 : 0;
-      const rebound = reboundT > 0 ? Math.sin(clamp(reboundT, 0, 1) * Math.PI) * 0.22 : 0;
-      const tiltDirection = walkSegmentTiltDirection(fromValue, toValue);
+      const settleT = p > 0.86 ? (p - 0.86) / 0.14 : 0;
+      const settle = settleT > 0
+        ? Math.exp(-settleT * 4.6) * Math.sin(settleT * Math.PI * 2.45)
+        : 0;
+      const sideSway = Math.sin(movePhase * Math.PI * 2) * hop * 1.25;
+      const pullBack = windup * (state.walk.boost ? 2.6 : 4.8);
+      const forwardSnap = launchStretch * (state.walk.boost ? 1.6 : 2.4);
 
       return {
         currentValue: lerp(fromValue, toValue, movePhase),
-        liftPx: markerStyle.selfLift + (hopHeight * hop) + (hopHeight * rebound * 0.18),
-        scaleX: 1 + (windup * 0.14) - (hop * 0.08) + (landingSquash * 0.17),
-        scaleY: 1 - (windup * 0.12) + (hop * 0.13) - (landingSquash * 0.16) + (rebound * 0.05),
-        tiltDeg: tiltDirection * ((hop * 6.8) - (windup * 2.4) - (landingSquash * 2.4) + (rebound * 1.8))
+        liftPx: markerStyle.selfLift - (windup * 2.2) + (hopHeight * hop) + (hopHeight * Math.max(0, settle) * 0.08),
+        scaleX: 1 + (windup * 0.16) - (launchStretch * 0.055) - (hop * 0.045) + (landingSquash * 0.19) - (settle * 0.025),
+        scaleY: 1 - (windup * 0.13) + (launchStretch * 0.13) + (hop * 0.09) - (landingSquash * 0.18) + (settle * 0.045),
+        tiltDeg: kinematics.tiltDirection * ((launchStretch * 8.4) + (hop * 5.2) - (windup * 4.6) - (landingSquash * 5.4) + (settle * 2.8)),
+        offsetX: (-kinematics.tangentX * pullBack) + (kinematics.tangentX * forwardSnap) + (kinematics.normalX * sideSway),
+        offsetY: (-kinematics.tangentY * pullBack) + (kinematics.tangentY * forwardSnap) + (kinematics.normalY * sideSway)
       };
     }
 
-    function setWalkSegment(fromValue, ts = performance.now()) {
+    function setWalkSegment(fromValue, ts = animationNow()) {
       const nextValue = Math.min(state.walk.toValue, fromValue + 1);
       if (nextValue <= fromValue) {
         finishWalkAndClaim();
@@ -2710,8 +5074,9 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
       if (!boostButton) return;
       const visible = state.walk.active;
       boostButton.classList.toggle("is-hidden", !visible);
-      boostButton.disabled = !visible || state.walk.boost;
-      boostButton.textContent = state.walk.boost ? "กำลังเร่ง..." : "เร่งให้จบ";
+      boostButton.disabled = !visible;
+      boostButton.textContent = ">>";
+      boostButton.classList.toggle("is-boosting", Boolean(state.walk.boost));
       boostButton.setAttribute("aria-pressed", state.walk.boost ? "true" : "false");
     }
 
@@ -2755,14 +5120,18 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
       }
     }
 
-    function enableWalkBoost() {
-      if (!state.walk.active || state.walk.boost) return;
-      const now = performance.now();
+    function setWalkBoost(active) {
+      const enabled = Boolean(active);
+      if (!state.walk.active || state.walk.boost === enabled) {
+        updateBoostButton();
+        return;
+      }
+      const now = animationNow();
       const elapsed = now - state.walk.segmentStartAt;
       const progress = state.walk.segmentDurationMs > 0
         ? clamp(elapsed / state.walk.segmentDurationMs, 0, 1)
         : 0;
-      state.walk.boost = true;
+      state.walk.boost = enabled;
       state.walk.segmentDurationMs = walkSegmentDurationMs(state.walk.segmentFromValue);
       state.walk.segmentStartAt = now - (progress * state.walk.segmentDurationMs);
       updateBoostButton();
@@ -2809,7 +5178,6 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
       resetWalkPose();
       updateBoostButton();
       renderSelfLayer();
-      focusOnSelf(false, true, state.walk.restoreScale || state.camera.minScale);
       if (!state.walk.pendingClaim) {
         state.walk.pendingClaim = true;
         updateWalkActionButton();
@@ -2847,13 +5215,16 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
       state.walk.fromValue = fromValue;
       state.walk.toValue = toValue;
       state.walk.currentValue = fromValue;
-      state.walk.startAt = performance.now();
+      state.walk.startAt = animationNow();
       state.walk.boost = false;
       state.walk.restoreScale = clamp(state.camera.scale, state.camera.minScale, state.camera.maxScale);
       resetWalkPose();
       setWalkSegment(fromValue, state.walk.startAt);
+      resetSelfFxTrail(state.walk.startAt);
+      if (Number(state.gesture.manualOverrideUntil || 0) <= state.walk.startAt) {
+        focusOnWalkArea(true, true);
+      }
 
-      focusOnWalkArea(true, true, Math.max(state.walk.restoreScale, state.camera.walkScale));
       updateBoostButton();
       updateWalkActionButton();
       renderSelfLayer();
@@ -2865,23 +5236,21 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
       const duration = Math.max(1, state.walk.segmentDurationMs);
       const elapsed = ts - state.walk.segmentStartAt;
       const t = clamp(elapsed / duration, 0, 1);
-      const motion = sampleWalkSegment(t, state.walk.segmentFromValue, state.walk.segmentToValue);
+      const motion = samplePremiumWalkSegment(t, state.walk.segmentFromValue, state.walk.segmentToValue);
       state.walk.currentValue = motion.currentValue;
       state.walk.visualLiftPx = motion.liftPx;
       state.walk.visualScaleX = motion.scaleX;
       state.walk.visualScaleY = motion.scaleY;
       state.walk.visualTiltDeg = motion.tiltDeg;
-
-      const point = pathPointForValue(state.walk.currentValue);
-      if (point) {
-        nudgeCameraToPoint(point, {
-          alignY: 0.67,
-          followStrength: state.walk.boost ? 0.31 : 0.22
-        });
-      }
+      state.walk.visualOffsetX = motion.offsetX;
+      state.walk.visualOffsetY = motion.offsetY;
+      updateWalkCameraFollow(ts);
 
       if (t >= 1) {
         state.walk.currentValue = state.walk.segmentToValue;
+        state.walk.visualOffsetX = 0;
+        state.walk.visualOffsetY = 0;
+        addLandingStepPulse(state.walk.segmentToValue, ts);
         if (state.walk.segmentToValue >= state.walk.toValue) {
           finishWalkAndClaim();
           return;
@@ -2891,13 +5260,42 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
     }
 
     function animationLoop(ts) {
-      updateCameraMomentum(ts);
-      updateCameraTween(ts);
-      updateWalk(ts);
-      updateSpriteLayer(ts);
-      renderSelfLayer(ts);
+      const timelineTs = ts - state.time.pausedDuration;
+      updateCameraMomentum(timelineTs);
+      updateCameraTween(timelineTs);
+      updateWalk(timelineTs);
+      updateSpriteLayer(timelineTs);
+      renderBoardCanvas(timelineTs);
       updateWalkActionButton();
       state.animationFrame = window.requestAnimationFrame(animationLoop);
+    }
+
+    function resetGestureState() {
+      state.gesture.pointers.clear();
+      state.gesture.dragStart = null;
+      state.gesture.pinchStart = null;
+      state.gesture.velocityX = 0;
+      state.gesture.velocityY = 0;
+      state.gesture.assistStrength = 0;
+      state.gesture.pathLock = false;
+      scene.classList.remove("is-dragging");
+    }
+
+    function pauseAnimationState() {
+      if (!state.time.pauseStartedAt) {
+        state.time.pauseStartedAt = performance.now();
+      }
+      resetGestureState();
+      stopCameraMotion();
+      setWalkBoost(false);
+    }
+
+    function resumeAnimationState() {
+      if (state.time.pauseStartedAt) {
+        state.time.pausedDuration += performance.now() - state.time.pauseStartedAt;
+        state.time.pauseStartedAt = 0;
+      }
+      resetGestureState();
     }
 
     function gestureDistance(a, b) {
@@ -2962,6 +5360,7 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
       if (event.target.closest(".reward-marker")) return;
       event.preventDefault();
       stopCameraMotion();
+      state.gesture.manualOverrideUntil = animationNow() + 1500;
       scene.setPointerCapture?.(event.pointerId);
       state.gesture.pointers.set(event.pointerId, event);
       scene.classList.add("is-dragging");
@@ -3026,8 +5425,11 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
             : 0;
           state.cameraMotion.alignY = state.gesture.pathLock ? 0.5 : 0.58;
           state.cameraMotion.snapToStep = state.gesture.pathLock;
-          state.cameraMotion.lastAt = performance.now();
+          state.cameraMotion.lastAt = animationNow();
         }
+      }
+      if (event.type === "pointercancel") {
+        resetGestureState();
       }
       updateGestureMode();
     }
@@ -3055,6 +5457,7 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
       }
       const followStrength = pathAssistStrengthFromTravel(event.deltaX, event.deltaY);
       state.cameraTween.active = false;
+      state.gesture.manualOverrideUntil = animationNow() + 1500;
       state.camera.x -= event.deltaX;
       state.camera.y -= event.deltaY;
       state.cameraMotion.active = true;
@@ -3066,7 +5469,7 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
       state.cameraMotion.verticalStrength = 0;
       state.cameraMotion.alignY = 0.58;
       state.cameraMotion.snapToStep = false;
-      state.cameraMotion.lastAt = performance.now();
+      state.cameraMotion.lastAt = animationNow();
       applyCamera();
     }, { passive: false });
 
@@ -3074,42 +5477,34 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
     document.addEventListener("gesturechange", preventViewportGesture, { passive: false });
     document.addEventListener("gestureend", preventViewportGesture, { passive: false });
     document.addEventListener("touchmove", preventViewportGesture, { passive: false });
+    window.addEventListener("pagehide", () => {
+      postMileageUiStateToParent({ overlayOpen: false });
+      pauseAnimationState();
+    }, { passive: true });
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) {
+        pauseAnimationState();
+      } else {
+        resumeAnimationState();
+      }
+    });
 
     zoomSlider.addEventListener("input", () => {
       setCameraScale(scaleFromZoomSlider(), viewportCenter());
     });
 
     rewardLayer.addEventListener("pointerdown", (event) => {
-      if (event.target.closest(".reward-marker")) {
-        event.stopPropagation();
-      }
+      event.stopPropagation();
     });
 
     rewardLayer.addEventListener("click", (event) => {
-      const marker = event.target.closest(".reward-marker");
-      if (!marker) return;
       event.preventDefault();
-      if (state.bootstrap?.requiresLogin) {
-        showToast("Sign in Discord ก่อนเพื่อรับรางวัล");
-        syncLoginButton(true);
-        return;
-      }
-      const stepIndex = Number(marker.dataset.rewardStepIndex ?? -1);
-      const reachedStep = Number(state.bootstrap?.summary?.positionStep ?? -1);
-      if (!Number.isFinite(stepIndex) || stepIndex < 0 || reachedStep < stepIndex) {
-        showToast("เดินถึงช่องนี้ก่อน แล้วค่อยกลับมากดรับ");
-        return;
-      }
-      if (!state.walk.pendingClaim) {
-        const markerRect = marker.getBoundingClientRect();
-        state.walk.pendingClaim = true;
-        void claimPendingRewards({
-          quietEmpty: false,
-          sourcePoint: {
-            x: markerRect.left + markerRect.width / 2,
-            y: markerRect.top + markerRect.height / 2
-          }
-        });
+      activateCanvasReward(event.clientX, event.clientY);
+    });
+
+    scene.addEventListener("click", (event) => {
+      if (activatePlayerClusterDetail(event.clientX, event.clientY) || activateCanvasReward(event.clientX, event.clientY)) {
+        event.preventDefault();
       }
     });
 
@@ -3127,6 +5522,10 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
 
     leaderboardClose.addEventListener("click", closeLeaderboard);
     leaderboardPanel.addEventListener("click", (event) => {
+      if (event.target === leaderboardPanel) {
+        closeLeaderboard();
+        return;
+      }
       const tabButton = event.target.closest("[data-rank-tab]");
       if (tabButton) {
         state.leaderboardTab = tabButton.dataset.rankTab === "weekly" ? "weekly" : "all";
@@ -3137,12 +5536,72 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
       if (!row) return;
       const player = findPlayerByUserId(row.dataset.rankUserId || "");
       if (player) {
+        closeLeaderboard();
         focusOnPlayer(player, true);
       }
     });
 
-    boostButton.addEventListener("click", () => {
-      enableWalkBoost();
+    stepPlayersClose.addEventListener("click", () => closeStepPlayersPanel());
+    stepPlayersPanel.addEventListener("click", (event) => {
+      if (event.target === stepPlayersPanel) {
+        closeStepPlayersPanel();
+        return;
+      }
+      const row = event.target.closest("[data-step-user-id]");
+      if (!row) return;
+      const player = findPlayerByUserId(row.dataset.stepUserId || "");
+      if (player) {
+        closeStepPlayersPanel();
+        focusOnPlayer(player, true);
+      }
+    });
+
+    function beginBoostHold(event) {
+      event.preventDefault();
+      boostButton.setPointerCapture?.(event.pointerId);
+      setWalkBoost(true);
+    }
+
+    function endBoostHold(event) {
+      event?.preventDefault?.();
+      if (event?.pointerId !== undefined) {
+        boostButton.releasePointerCapture?.(event.pointerId);
+      }
+      setWalkBoost(false);
+    }
+
+    boostButton.addEventListener("pointerdown", beginBoostHold, { passive: false });
+    boostButton.addEventListener("pointerup", endBoostHold, { passive: false });
+    boostButton.addEventListener("pointercancel", endBoostHold, { passive: false });
+    boostButton.addEventListener("lostpointercapture", () => {
+      setWalkBoost(false);
+    });
+    boostButton.addEventListener("click", (event) => {
+      event.preventDefault();
+    });
+    boostButton.addEventListener("keydown", (event) => {
+      if (event.key !== " " && event.key !== "Enter") return;
+      event.preventDefault();
+      setWalkBoost(true);
+    });
+    boostButton.addEventListener("keyup", (event) => {
+      if (event.key !== " " && event.key !== "Enter") return;
+      event.preventDefault();
+      setWalkBoost(false);
+    });
+    boostButton.addEventListener("blur", () => {
+      setWalkBoost(false);
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape") return;
+      if (state.stepPlayersPanel.open) {
+        closeStepPlayersPanel();
+        return;
+      }
+      if (state.leaderboardOpen) {
+        closeLeaderboard();
+      }
     });
 
     walkActionButton.addEventListener("click", () => {
@@ -3154,70 +5613,297 @@ $playerToken = trim((string) ($_GET['player_token'] ?? ''));
       computeScales();
       state.camera.scale = clamp(state.camera.scale, state.camera.minScale, state.camera.maxScale);
       applyCamera();
+      renderBoardCanvas();
       renderSelfLayer();
       updateWalkActionButton();
     }, { passive: true });
 
+    function previewPlayersForStep(stepIndex) {
+      const target = Number(stepIndex);
+      if (!Number.isFinite(target)) return [];
+      return (state.bootstrap?.players || []).filter((player) => Number(player.positionStep ?? -1) === target);
+    }
+
+    function previewRewardCandidates(summary = state.bootstrap?.summary) {
+      const reachedStep = Number(summary?.positionStep ?? -1);
+      const claimed = new Set(Array.isArray(summary?.claimedRewardIds) ? summary.claimedRewardIds.map((value) => String(value || "")) : []);
+      const entries = [];
+      const pushReward = (reward, fallbackKind = "coin") => {
+        const rewardId = String(reward?.id || "");
+        const stepIndex = Number.isInteger(reward?.stepIndex) ? Number(reward.stepIndex) : -1;
+        if (!rewardId || claimed.has(rewardId) || stepIndex < 0 || reachedStep < stepIndex) return;
+        entries.push({
+          id: rewardId,
+          rewardId,
+          stepIndex,
+          kind: String(reward?.kind || reward?.meta?.kind || fallbackKind),
+          amount: Number(reward?.amount ?? reward?.meta?.amount ?? 1),
+          itemCode: String(reward?.itemCode || reward?.meta?.itemCode || ""),
+          rewardTemplateId: String(reward?.rewardTemplateId || "")
+        });
+      };
+      (state.board?.rewards || []).forEach((reward) => pushReward(reward));
+      (state.board?.rewardNodes || []).forEach((reward) => pushReward(reward));
+      return entries;
+    }
+
+    function simulatedPreviewClaim() {
+      const claimedRewards = previewRewardCandidates();
+      const current = state.bootstrap?.summary || {};
+      const claimedRewardIds = new Set(Array.isArray(current.claimedRewardIds) ? current.claimedRewardIds.map((value) => String(value || "")) : []);
+      claimedRewards.forEach((reward) => {
+        if (reward.rewardId) claimedRewardIds.add(String(reward.rewardId));
+      });
+      const summary = {
+        ...current,
+        claimedRewardIds: Array.from(claimedRewardIds),
+        claimableRewardCount: 0
+      };
+      return {
+        ok: true,
+        previewOnly: true,
+        claimedRewards,
+        summary
+      };
+    }
+
+    function buildPreviewBootstrap(board, simulation = {}) {
+      const nextBoard = cloneJson(board || state.board || {});
+      const maxIndex = Math.max(-1, Number(nextBoard?.steps?.length || 0) - 1);
+      const targetStep = clamp(Math.trunc(Number(simulation.step ?? simulation.positionStep ?? -1)), -1, maxIndex);
+      const walkFrom = clamp(Math.trunc(Number(simulation.walkFrom ?? targetStep)), -1, maxIndex);
+      const autoplay = Boolean(simulation.autoplay || simulation.walk);
+      const pendingSteps = autoplay ? Math.max(0, targetStep - walkFrom) : 0;
+      const claimedRewardIds = Array.isArray(simulation.claimedRewardIds)
+        ? simulation.claimedRewardIds.map((value) => String(value || "")).filter(Boolean)
+        : [];
+      const friendCount = Math.max(0, Math.min(12, Math.round(Number(simulation.friendCount ?? nextBoard?.meta?.fx?.friendCount ?? 3))));
+      const players = Array.isArray(simulation.players)
+        ? simulation.players
+        : Array.from({ length: Boolean(simulation.showFriends ?? true) ? friendCount : 0 }, (_, index) => ({
+          userId: `preview-friend-${index + 1}`,
+          displayName: `เพื่อน ${index + 1}`,
+          avatarUrl: "",
+          positionStep: Math.max(-1, targetStep - index - 1),
+          lifetimeSteps: Math.max(0, targetStep - index)
+        }));
+      const summary = {
+        boardCode: nextBoard?.boardCode || initialBoardCode,
+        lifetimeSteps: Math.max(0, targetStep + 1),
+        positionStep: targetStep,
+        lastAnimatedStep: pendingSteps > 0 ? walkFrom : targetStep,
+        pendingSteps,
+        pendingWalkCount: pendingSteps,
+        badgeCount: pendingSteps,
+        finished: maxIndex >= 0 && targetStep >= maxIndex,
+        claimableRewardCount: 0,
+        claimedRewardIds,
+        requiresLogin: false
+      };
+      const bootstrap = {
+        ok: true,
+        previewOnly: true,
+        requiresLogin: false,
+        serviceUnavailable: false,
+        board: nextBoard,
+        summary,
+        progress: {
+          lifetimeSteps: summary.lifetimeSteps,
+          positionStep: summary.positionStep,
+          lastAnimatedStep: summary.lastAnimatedStep,
+          finished: summary.finished
+        },
+        pending: {
+          startStepIndex: pendingSteps > 0 ? walkFrom + 1 : null,
+          endStepIndex: pendingSteps > 0 ? targetStep : null,
+          previewRewards: []
+        },
+        players,
+        self: {
+          userId: "preview-self",
+          displayName: "ME",
+          avatarUrl: String(simulation.avatarUrl || ""),
+          lifetimeSteps: summary.lifetimeSteps,
+          positionStep: targetStep
+        },
+        leaderboard: {
+          all: [],
+          weekly: []
+        }
+      };
+      bootstrap.summary.claimableRewardCount = previewRewardCandidates(bootstrap.summary).length;
+      return bootstrap;
+    }
+
+    async function applyBootstrapData(bootstrapData, options = {}) {
+      const previousCamera = state.preview.enabled && state.preview.bootstrapped && options.preserveCamera !== false
+        ? { x: state.camera.x, y: state.camera.y, scale: state.camera.scale }
+        : null;
+      if (state.animationFrame && !options.keepAnimationLoop) {
+        window.cancelAnimationFrame(state.animationFrame);
+        state.animationFrame = 0;
+      }
+      state.boardReady = false;
+      state.walk.active = false;
+      state.walk.pendingClaim = false;
+      resetWalkPose();
+	      state.board = bootstrapData.board;
+	      state.bootstrap = state.preview.enabled
+	        ? buildPreviewBootstrap(state.board, options.simulation || state.preview.simulation || {})
+	        : applyDebugConfigToBootstrap(bootstrapData);
+	      state.board = state.bootstrap.board;
+	      state.canvas.softSpriteCache.clear();
+	      applyBoardUiSettings();
+      syncClaimedRewardState(state.bootstrap.summary);
+      if (!state.board?.image) {
+        throw new Error("BOARD_UNAVAILABLE");
+      }
+
+      renderBoardTrack();
+      renderStepLayer();
+      renderRewardLayer();
+      renderSpriteLayer();
+      renderPlayerLayer();
+      renderSelfLayer();
+      computeScales();
+      if (previousCamera) {
+        state.camera.scale = clamp(previousCamera.scale, state.camera.minScale, state.camera.maxScale);
+        state.camera.x = previousCamera.x;
+        state.camera.y = previousCamera.y;
+        applyCamera();
+      } else {
+        state.camera.scale = state.camera.minScale;
+      }
+      if (previousCamera) {
+        // keep current preview viewport
+      } else if (focusForDebugZone()) {
+        // already focused by debug zone
+      } else {
+        focusOnSelf(state.preview.enabled);
+      }
+
+      if (state.bootstrap.serviceUnavailable) {
+        hideMessage();
+        syncLoginButton(false);
+        showToast("ตอนนี้เชื่อมข้อมูลผู้เล่นไม่สำเร็จ กำลังแสดงแมปแบบจำกัดชั่วคราว", 4200);
+      } else if (state.bootstrap.requiresLogin) {
+        hideMessage();
+        syncLoginButton(true);
+      } else {
+        hideMessage();
+        syncLoginButton(false);
+      }
+
+      updateSummary();
+      postSummaryToParent();
+      postMileageUiStateToParent();
+      if (Number(state.bootstrap?.summary?.unmappedOverflowSteps || 0) > 0) {
+        showToast(`Mileage ยังนับอยู่ แต่ตอนนี้สุดแมพที่มาร์คแล้ว +${Number(state.bootstrap.summary.unmappedOverflowSteps || 0).toLocaleString()} ช่อง`, 3600);
+      }
+
+      await waitForBoardImagesReady();
+      state.boardReady = true;
+      computeScales();
+      if (previousCamera) {
+        state.camera.scale = clamp(previousCamera.scale, state.camera.minScale, state.camera.maxScale);
+        state.camera.x = previousCamera.x;
+        state.camera.y = previousCamera.y;
+        applyCamera();
+      } else {
+        state.camera.scale = state.camera.minScale;
+      }
+      renderBoardCanvas();
+      renderSelfLayer();
+      updateWalkActionButton();
+
+      if (previousCamera) {
+        // keep current preview viewport
+      } else if (focusForDebugZone()) {
+        // already focused by debug zone
+      } else {
+        focusOnSelf(state.preview.enabled);
+      }
+
+      if (!state.animationFrame) {
+        state.animationFrame = window.requestAnimationFrame(animationLoop);
+      }
+      if ((state.debug.autoplay || options.autoplay) && canAnimatePendingWalk()) {
+        window.setTimeout(() => {
+          startPendingWalk();
+        }, 80);
+      }
+      state.preview.bootstrapped = true;
+    }
+
+    async function applyPreviewMessage(payload) {
+      if (!state.preview.enabled || !payload || payload.type !== "dekpoke-mileage-preview-board") return;
+      state.preview.simulation = plainObject(payload.simulation) ? payload.simulation : {};
+      const board = plainObject(payload.board) ? payload.board : state.board;
+      try {
+        if (plainObject(payload.board)) {
+          await applyBootstrapData(buildPreviewBootstrap(board, state.preview.simulation), {
+            simulation: state.preview.simulation,
+            autoplay: Boolean(state.preview.simulation.autoplay),
+            keepAnimationLoop: true,
+            preserveCamera: true
+          });
+        } else {
+          applyPreviewSimulation(state.preview.simulation);
+        }
+      } catch (error) {
+        console.warn("Mileage preview update failed:", error);
+      }
+    }
+
+    function applyPreviewSimulation(simulation = {}) {
+      if (!state.preview.enabled || !state.board) return;
+      state.preview.simulation = plainObject(simulation) ? simulation : {};
+      state.walk.active = false;
+      state.walk.pendingClaim = false;
+      resetWalkPose();
+      state.bootstrap = buildPreviewBootstrap(state.board, state.preview.simulation);
+      syncClaimedRewardState(state.bootstrap.summary);
+      updateSummary();
+      renderRewardLayer();
+      renderPlayerLayer();
+      renderSelfLayer();
+      renderBoardCanvas();
+      updateWalkActionButton();
+      if (Boolean(state.preview.simulation.autoplay) && canAnimatePendingWalk()) {
+        startPendingWalk();
+      }
+    }
+
+    function handlePreviewCommand(command) {
+      if (!state.preview.enabled || !state.board) return;
+      if (command === "zoom-in") {
+        setCameraScale(state.camera.scale * 1.18, viewportCenter());
+      } else if (command === "zoom-out") {
+        setCameraScale(state.camera.scale / 1.18, viewportCenter());
+      } else if (command === "focus-self") {
+        focusOnSelf(true, true);
+      } else if (command === "fit") {
+        state.camera.scale = state.camera.minScale;
+        focusOnSelf(false, true, state.camera.minScale);
+      }
+      renderBoardCanvas();
+      renderSelfLayer();
+    }
+
+    window.addEventListener("message", (event) => {
+      if (!state.preview.enabled || event.origin !== window.location.origin) return;
+      if (event.data?.type === "dekpoke-mileage-preview-command") {
+        handlePreviewCommand(String(event.data.command || ""));
+        return;
+      }
+      void applyPreviewMessage(event.data);
+    });
+
     async function boot() {
       try {
         showMessage("กำลังโหลดแมป", "กำลังดึงข้อมูลแมป ไอคอนรางวัล และตำแหน่งผู้เล่น");
-        state.bootstrap = await fetchMileageJson("bootstrap");
-        state.board = state.bootstrap.board;
-        applyBoardUiSettings();
-        syncClaimedRewardState(state.bootstrap.summary);
-        if (!state.board?.image) {
-          throw new Error("BOARD_UNAVAILABLE");
-        }
-
-        renderBoardTrack();
-        renderStepLayer();
-        renderRewardLayer();
-        renderSpriteLayer();
-        renderPlayerLayer();
-        renderSelfLayer();
-        computeScales();
-        state.camera.scale = state.camera.minScale;
-        if (summaryPendingWalkSteps() > 0) {
-          focusOnWalkArea(false);
-        } else {
-          focusOnSelf(false);
-        }
-
-        if (state.bootstrap.serviceUnavailable) {
-          hideMessage();
-          syncLoginButton(false);
-          showToast("ตอนนี้เชื่อมข้อมูลผู้เล่นไม่สำเร็จ กำลังแสดงแมปแบบจำกัดชั่วคราว", 4200);
-        } else if (state.bootstrap.requiresLogin) {
-          hideMessage();
-          syncLoginButton(true);
-        } else {
-          hideMessage();
-          syncLoginButton(false);
-        }
-
-        updateSummary();
-        postSummaryToParent();
-        if (Number(state.bootstrap?.summary?.unmappedOverflowSteps || 0) > 0) {
-          showToast(`Mileage ยังนับอยู่ แต่ตอนนี้สุดแมพที่มาร์คแล้ว +${Number(state.bootstrap.summary.unmappedOverflowSteps || 0).toLocaleString()} ช่อง`, 3600);
-        }
-
-        await waitForBoardImagesReady();
-        state.boardReady = true;
-        computeScales();
-        state.camera.scale = state.camera.minScale;
-        renderSelfLayer();
-        updateWalkActionButton();
-
-        if (summaryPendingWalkSteps() > 0) {
-          focusOnWalkArea(false);
-        } else {
-          focusOnSelf(false);
-        }
-
-        if (state.animationFrame) {
-          window.cancelAnimationFrame(state.animationFrame);
-        }
-        state.animationFrame = window.requestAnimationFrame(animationLoop);
+        const bootstrapData = await fetchMileageJson("bootstrap");
+        await applyBootstrapData(bootstrapData, { autoplay: state.debug.autoplay });
       } catch (error) {
         console.error(error);
         syncLoginButton(false);

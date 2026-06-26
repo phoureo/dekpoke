@@ -434,6 +434,7 @@
         'page.gacha_prize': 'Prize Setting',
         'page.gacha_report': 'Report',
         'page.gacha_shop': 'Shop Setting',
+        'page.mileage_report': 'รายงาน Mileage',
         'page.shop_report': 'รายงาน Shop',
         'page.shop_member_bags': 'กระเป๋าสมาชิก',
         'page.bag_transaction_report': 'ธุรกรรมรวมกระเป๋า',
@@ -637,6 +638,7 @@
         'source.earn_member_first_join': 'First join',
         'source.earn_invite_member': 'Invite member',
         'source.earn_manual': 'Manual grant',
+        'source.earn_manual_revoke': 'Manual revoke',
         'source.gacha_spin': 'ใช้หมุนกาชา',
         'source.gacha_spin_refund': 'คืนเครดิตกาชา',
         'source.gacha_reset_mock_credit': 'รีเซ็ตเครดิต',
@@ -1100,6 +1102,7 @@
         'page.gacha_prize': 'Prize Setting',
         'page.gacha_report': 'Report',
         'page.gacha_shop': 'Shop Setting',
+        'page.mileage_report': 'Mileage Report',
         'page.shop_report': 'Shop Report',
         'page.shop_member_bags': 'Member Bags',
         'page.bag_transaction_report': 'Bag Transaction Report',
@@ -1303,6 +1306,7 @@
         'source.earn_member_first_join': 'First join',
         'source.earn_invite_member': 'Invite member',
         'source.earn_manual': 'Manual grant',
+        'source.earn_manual_revoke': 'Manual revoke',
         'source.gacha_spin': 'Gacha spin',
         'source.gacha_spin_refund': 'Gacha refund',
         'source.gacha_reset_mock_credit': 'Credit reset',
@@ -1592,6 +1596,7 @@
         earn_settings: this.loadEarnSettings,
         earn_manual: this.loadEarnManual,
         reward_report: this.loadRewardReport,
+        mileage_report: this.loadMileageReport,
         shop_report: this.loadShopReport,
         shop_member_bags: this.loadShopMemberBags,
         bag_transaction_report: this.loadBagTransactionReport,
@@ -2481,6 +2486,121 @@
           this.loadRewardReport();
         },
       });
+    },
+    loadMileageReport() {
+      const draftFilters = { ...(this.state.mileageReportFilters || {}) };
+      const domFilters = $('#mileageReportFilter').length ? this.formParams('#mileageReportFilter') : {};
+      const params = { ...draftFilters, ...domFilters };
+      params.page = this.state.mileageReportPage || Number(params.page || 1) || 1;
+      params.pageSize = Number(params.pageSize || draftFilters.pageSize || 50) || 50;
+      const sort = this.sortState.mileageReportTable;
+      if (sort) {
+        params.sort = sort.key;
+        params.dir = sort.dir;
+      }
+      this.state.mileageReportFilters = { ...params };
+
+      this.api('/api/data/mileage_report.php', params).done((res) => {
+        this.state.mileageReportBoards = res.filterOptions?.boards || [];
+        this.state.mileageReportStatuses = res.filterOptions?.statuses || [];
+        this.fillMileageReportFilterOptions();
+        this.applyMileageReportFilterState(res.filters || {});
+        this.state.mileageReportFilters = { ...(res.filters || {}), pageSize: res.pageSize || params.pageSize };
+        this.metrics('#mileageReportMetrics', [
+          ['Players', res.metrics?.players],
+          ['Active', res.metrics?.activePlayers],
+          ['Steps', res.metrics?.totalSteps],
+          ['Spins', res.metrics?.totalSpins],
+          ['Claimed', res.metrics?.claimedRewards],
+          ['Claimable', res.metrics?.claimablePlayers],
+        ]);
+        this.table('#mileageReportTable', [
+          ['User', 'displayName', (row) => this.userCell(row)],
+          ['Board', 'boardCode', (row) => `<div><strong>${this.esc(row.boardTitle || row.boardCode || '-')}</strong><div class="orbit-user-sub">${this.esc(row.boardCode || '')}</div></div>`],
+          ['Steps', 'lifetimeSteps'],
+          ['Position', 'positionStep'],
+          ['Spins', 'spinCount'],
+          ['Claimed', 'claimedRewardCount'],
+          ['Claimable', 'claimableRewardCount'],
+          ['Status', 'progressStatus', (row) => this.mileageReportStatusBadge(row.progressStatus)],
+          ['Updated', 'lastActivityDate'],
+        ], res.rows || [], {
+          id: 'mileageReportTable',
+          rowClick: (row) => this.openMileageReportDetail(row),
+          onSort: () => {
+            this.state.mileageReportPage = 1;
+            this.loadMileageReport();
+          },
+        });
+        this.pager('#mileageReportPager', res, (page) => {
+          this.state.mileageReportPage = page;
+          this.loadMileageReport();
+        });
+      }).fail((xhr) => this.error($('#pageContainer'), xhr.responseJSON?.message || 'โหลด Mileage report ไม่สำเร็จ'));
+    },
+    fillMileageReportFilterOptions() {
+      const root = $('#mileageReportFilter');
+      if (!root.length) return;
+      const boardSelect = root.find('[name="boardCode"]');
+      const statusSelect = root.find('[name="status"]');
+      if (boardSelect.length) {
+        const current = String(this.state.mileageReportFilters?.boardCode || boardSelect.val() || '');
+        boardSelect.html([
+          '<option value="">ทุก board</option>',
+          ...(this.state.mileageReportBoards || []).map((board) => `<option value="${this.escAttr(board.boardCode)}">${this.esc(board.title || board.boardCode)}</option>`),
+        ].join(''));
+        boardSelect.val(current).dropdown('refresh');
+      }
+      if (statusSelect.length) {
+        const current = String(this.state.mileageReportFilters?.status || statusSelect.val() || '');
+        statusSelect.html([
+          '<option value="">ทุกสถานะ</option>',
+          ...(this.state.mileageReportStatuses || []).map((status) => `<option value="${this.escAttr(status)}">${this.esc(status)}</option>`),
+        ].join(''));
+        statusSelect.val(current).dropdown('refresh');
+      }
+    },
+    applyMileageReportFilterState(filters) {
+      const root = $('#mileageReportFilter');
+      if (!root.length) return;
+      const values = {
+        q: filters.q || '',
+        boardCode: filters.boardCode || '',
+        status: filters.status || '',
+        dateFrom: filters.dateFrom || '',
+        dateTo: filters.dateTo || '',
+        pageSize: String(filters.pageSize || this.state.mileageReportFilters?.pageSize || 50),
+      };
+      Object.entries(values).forEach(([name, value]) => {
+        const field = root.find(`[name="${name}"]`);
+        if (!field.length) return;
+        field.val(value);
+        if (field.is('select')) field.dropdown('refresh');
+      });
+    },
+    mileageReportStatusBadge(status) {
+      const key = String(status || '');
+      if (key === 'claimable') return this.badge('claimable', 'warning');
+      if (key === 'claimed') return this.badge('claimed', 'success');
+      if (key === 'finished') return this.badge('finished', 'partial');
+      return this.badge(key || 'active', '');
+    },
+    openMileageReportDetail(row) {
+      this.drawer(`Mileage ${row?.displayName || row?.userId || ''}`, `
+        <div class="orbit-metric-strip" style="margin-bottom:12px">
+          <div class="orbit-metric"><div class="orbit-muted">Board</div><div class="orbit-metric-value">${this.esc(row?.boardTitle || row?.boardCode || '-')}</div></div>
+          <div class="orbit-metric"><div class="orbit-muted">Steps</div><div class="orbit-metric-value">${Number(row?.lifetimeSteps || 0).toLocaleString()}</div></div>
+          <div class="orbit-metric"><div class="orbit-muted">Spins</div><div class="orbit-metric-value">${Number(row?.spinCount || 0).toLocaleString()}</div></div>
+          <div class="orbit-metric"><div class="orbit-muted">Claimed</div><div class="orbit-metric-value">${Number(row?.claimedRewardCount || 0).toLocaleString()}</div></div>
+          <div class="orbit-metric"><div class="orbit-muted">Claimable</div><div class="orbit-metric-value">${Number(row?.claimableRewardCount || 0).toLocaleString()}</div></div>
+        </div>
+        <div class="orbit-json-summary">
+          ${this.mileageReportStatusBadge(row?.progressStatus)}
+          <span class="orbit-json-chip">Position ${this.esc(row?.positionStep ?? '-')}</span>
+          <span class="orbit-json-chip">Updated ${this.esc(row?.lastActivityDate || '-')}</span>
+        </div>
+        <pre class="orbit-json-pre">${this.esc(JSON.stringify(row || {}, null, 2))}</pre>
+      `);
     },
     loadShopReport() {
       const draftFilters = { ...(this.state.shopReportFilters || {}) };
@@ -3374,6 +3494,7 @@
         earn_member_first_join: 'source.earn_member_first_join',
         earn_invite_member: 'source.earn_invite_member',
         earn_manual: 'source.earn_manual',
+        earn_manual_revoke: 'source.earn_manual_revoke',
         gacha_spin: 'source.gacha_spin',
         gacha_spin_refund: 'source.gacha_spin_refund',
         gacha_reset_mock_credit: 'source.gacha_reset_mock_credit',
@@ -4158,12 +4279,29 @@
         this.renderEarnManualForm();
         this.table('#earnManualRecentTable', [
           ['table.time', 'createDate'],
-          ['table.user', 'displayName', (row) => this.userCell(row)],
           ['Target', 'targetLabel', (row) => this.esc(this.manualEarnTargetSummaryText(row))],
-          ['table.amount', 'unitRewards', (row) => this.rewardReportUnitSummary(row.unitRewards || {})],
+          ['Per User', 'unitRewardsEach', (row) => this.rewardReportUnitSummary(row.unitRewardsEach || row.unitRewards || {})],
+          ['Total', 'unitRewardsTotal', (row) => this.rewardReportUnitSummary(row.unitRewardsTotal || {})],
           ['table.reason', 'reason', (row) => this.esc(row.reason || '-')],
+          ['Recipients', 'sampleRecipients', (row) => {
+            const names = Array.isArray(row.sampleRecipients) ? row.sampleRecipients.slice(0, 3) : [];
+            const suffix = Number(row.recipientCount || 0) > names.length ? ` +${Number(row.recipientCount || 0) - names.length}` : '';
+            return this.esc((names.join(', ') || '-') + suffix);
+          }],
           ['table.staff', 'grantedBy', (row) => this.esc(row.grantedBy || '-')],
+          ['Status', 'revoked', (row) => row.revoked
+            ? `${this.badge('revoked', 'failed')} ${this.esc(row.revokedBy ? `โดย ${row.revokedBy}` : '')}<div class="orbit-muted">${this.esc(row.revokeReason ? `เหตุผล: ${row.revokeReason}` : '')}</div>`
+            : this.badge('active', 'success')],
+          ['Action', 'batchId', (row) => row.revoked
+            ? '<span class="orbit-muted">ยกเลิกแล้ว</span>'
+            : `<button class="ui mini red basic button" type="button" data-earn-manual-revoke="${this.escAttr(row.batchId || '')}"><i class="fa-solid fa-rotate-left"></i> Revoke</button>`],
         ], res.recent || [], { id: 'earnManualRecentTable' });
+        $('#earnManualRecentTable [data-earn-manual-revoke]').off('click').on('click', (event) => {
+          const batchId = String($(event.currentTarget).data('earn-manual-revoke') || '');
+          const row = (res.recent || []).find((entry) => String(entry.batchId || '') === batchId);
+          if (!row) return;
+          this.openEarnManualRevokeModal(row);
+        });
       }).fail((xhr) => this.error($('#pageContainer'), xhr.responseJSON?.message || 'โหลด Manual Earn ไม่สำเร็จ'));
     },
     earnManualGrantables() {
@@ -4233,7 +4371,7 @@
       }).off('input').on('input', (event) => {
         this.state.earnManualDraft.query = String($(event.currentTarget).val() || '');
       });
-      $('#earnManualGrantButton').off('click').on('click', () => this.grantEarnManual());
+      $('#earnManualGrantButton').off('click').on('click', () => this.requestEarnManualGrant());
     },
     syncEarnManualTargetUi() {
       const targetType = String(this.state.earnManualDraft?.targetType || 'user');
@@ -4302,7 +4440,7 @@
     searchEarnManualUsers() {
       const q = String($('#earnManualForm [name="q"]').val() || '').trim();
       this.state.earnManualDraft.query = q;
-      if (q.length < 2) {
+      if (!q) {
         this.state.earnManualSearchResults = [];
         this.renderEarnManualSearchResults();
         return;
@@ -4331,15 +4469,78 @@
         reason: String(draft.reason || '').trim(),
       };
     },
-    grantEarnManual() {
+    validateEarnManualReason(reason, actionLabel = 'Manual Earn') {
+      if (String(reason || '').trim()) return true;
+      this.toast(`กรุณาระบุเหตุผลสำหรับ ${actionLabel}`);
+      $('#earnManualForm [name="reason"]').focus();
+      return false;
+    },
+    requestEarnManualGrant() {
       const payload = this.collectEarnManualPayload();
+      if (!this.validateEarnManualReason(payload.reason, 'การแจก Manual Earn')) return;
+      this.api('/api/data/earn_manual_preview.php', payload, 'POST').done((res) => {
+        this.openEarnManualGrantModal(payload, res.preview || {});
+      }).fail((xhr) => this.toast(xhr.responseJSON?.message || 'ตรวจสอบรายการแจกไม่สำเร็จ'));
+    },
+    renderEarnManualPreviewCard(preview = {}) {
+      const eachHtml = this.rewardReportUnitSummary(preview.unitRewardsEach || preview.unitRewards || {});
+      const totalHtml = this.rewardReportUnitSummary(preview.unitRewardsTotal || {});
+      const sampleRecipients = Array.isArray(preview.sampleRecipients) ? preview.sampleRecipients : [];
+      const listedRecipients = Array.isArray(preview.recipients) ? preview.recipients : [];
+      const names = (preview.listSuppressed ? sampleRecipients : listedRecipients).map((row) => this.esc(row.displayName || row.userId || '-'));
+      return `
+        <div class="ui segments">
+          <div class="ui secondary segment">
+            <div class="orbit-metric-strip">
+              <div class="orbit-metric"><div class="orbit-muted">Target</div><div class="orbit-metric-value">${this.esc(this.manualEarnTargetSummaryText(preview))}</div></div>
+              <div class="orbit-metric"><div class="orbit-muted">Per User</div><div class="orbit-metric-value">${eachHtml || '-'}</div></div>
+              <div class="orbit-metric"><div class="orbit-muted">Total</div><div class="orbit-metric-value">${totalHtml || '-'}</div></div>
+            </div>
+          </div>
+          <div class="ui segment">
+            <div><strong>เหตุผล:</strong> ${this.esc(preview.reason || '-')}</div>
+            <div class="orbit-muted" style="margin-top:8px">${preview.listSuppressed
+              ? `ระดับ server จะไม่แสดงรายชื่อทั้งหมด (${Number(preview.recipientCount || 0).toLocaleString()} คน)`
+              : `รายชื่อที่จะได้รับ ${Number(preview.recipientCount || 0).toLocaleString()} คน`}</div>
+            <div style="margin-top:10px">${names.length
+              ? names.map((name) => `<span class="ui mini label">${name}</span>`).join(' ')
+              : '<span class="orbit-muted">ไม่มีรายชื่อแสดง</span>'}</div>
+          </div>
+        </div>
+      `;
+    },
+    openEarnManualGrantModal(payload, preview = {}) {
+      $('#earnManualConfirmModal').remove();
+      $('body').append(`
+        <div class="ui small modal" id="earnManualConfirmModal">
+          <div class="header">ยืนยันการแจก Manual Earn</div>
+          <div class="content">
+            ${this.renderEarnManualPreviewCard(preview)}
+          </div>
+          <div class="actions">
+            <button class="ui button deny">ยกเลิก</button>
+            <button class="ui primary button" id="earnManualConfirmSubmit"><i class="fa-solid fa-hand-holding-dollar"></i> Grant</button>
+          </div>
+        </div>`);
+      $('#earnManualConfirmModal').modal({
+        autofocus: false,
+        closable: true,
+        onHidden: () => $('#earnManualConfirmModal').remove(),
+      }).modal('show');
+      $('#earnManualConfirmSubmit').off('click').on('click', () => {
+        $('#earnManualConfirmModal').modal('hide');
+        this.grantEarnManual(payload);
+      });
+    },
+    grantEarnManual(payload = this.collectEarnManualPayload()) {
       this.api('/api/admin/earn_manual.php', payload, 'POST').done((res) => {
         $('#earnManualResult').html(this.jsonSummary({
           batchId: res.batchId,
           targetType: res.targetType,
           targetLabel: res.targetLabel,
           recipientCount: res.recipientCount,
-          unitRewards: res.unitRewards,
+          unitRewardsEach: res.unitRewardsEach || res.unitRewards,
+          unitRewardsTotal: res.unitRewardsTotal || {},
           eventCount: res.eventCount,
         }));
         this.state.earnManualDraft = {
@@ -4356,10 +4557,64 @@
         this.toast('toast.earn_manual_granted');
       }).fail((xhr) => this.toast(xhr.responseJSON?.message || 'Manual grant failed'));
     },
+    openEarnManualRevokeModal(row = {}) {
+      $('#earnManualRevokeModal').remove();
+      $('body').append(`
+        <div class="ui small modal" id="earnManualRevokeModal">
+          <div class="header">ยืนยันการยกเลิก Manual Earn</div>
+          <div class="content">
+            ${this.renderEarnManualPreviewCard({
+              ...row,
+              recipients: Array.isArray(row.sampleRecipients) ? row.sampleRecipients.map((name) => ({ displayName: name })) : [],
+              listSuppressed: false,
+            })}
+            <div class="ui form" style="margin-top:12px">
+              <div class="field">
+                <label>เหตุผลในการยกเลิก</label>
+                <input type="text" id="earnManualRevokeReason" required placeholder="ต้องระบุเหตุผล เช่น แจกผิดคน / แก้ยอด / ดึงคืน">
+              </div>
+            </div>
+          </div>
+          <div class="actions">
+            <button class="ui button deny">ปิด</button>
+            <button class="ui red button" id="earnManualRevokeSubmit"><i class="fa-solid fa-rotate-left"></i> Revoke</button>
+          </div>
+        </div>`);
+      $('#earnManualRevokeModal').modal({
+        autofocus: false,
+        closable: true,
+        onHidden: () => $('#earnManualRevokeModal').remove(),
+      }).modal('show');
+      $('#earnManualRevokeSubmit').off('click').on('click', () => {
+        const reason = String($('#earnManualRevokeReason').val() || '').trim();
+        if (!reason) {
+          this.toast('กรุณาระบุเหตุผลในการยกเลิก Manual Earn');
+          $('#earnManualRevokeReason').focus();
+          return;
+        }
+        $('#earnManualRevokeModal').modal('hide');
+        this.revokeEarnManual(String(row.batchId || ''), reason);
+      });
+    },
+    revokeEarnManual(batchId, reason = '') {
+      if (!String(reason || '').trim()) {
+        this.toast('กรุณาระบุเหตุผลในการยกเลิก Manual Earn');
+        return;
+      }
+      this.api('/api/admin/earn_manual_revoke.php', { batchId, reason }, 'POST').done((res) => {
+        $('#earnManualResult').html(this.jsonSummary({
+          batchId: res.batchId,
+          reversalCount: res.reversalCount,
+          affectedRecipients: res.affectedRecipients,
+        }));
+        this.loadEarnManual();
+        this.toast('Manual revoke success');
+      }).fail((xhr) => this.toast(xhr.responseJSON?.message || 'Manual revoke failed'));
+    },
     lookupDirectoryMembers(q) {
       const deferred = $.Deferred();
       const query = String(q || '').trim();
-      if (query.length < 2) {
+      if (!query) {
         deferred.resolve([]);
         return deferred.promise();
       }
@@ -6412,8 +6667,8 @@
           </div>
           <div class="ui mini form">
             <div class="two fields">
-              <div class="field"><label>${this.fieldLabel('Internal %', 'เรท tier ที่ใช้สุ่มจริงหลังบ้าน')}</label><input type="number" step="0.01" min="0" data-tier-field="rate" value="${this.escAttr(tier.rate ?? 0)}"></div>
-              <div class="field"><label>${this.fieldLabel('Public %', 'เรท tier ที่แสดงหน้ารางวัล แยกจากเรทสุ่มจริงได้')}</label><input type="number" step="0.01" min="0" data-tier-field="displayRate" value="${this.escAttr(tier.displayRate ?? tier.rate ?? 0)}"></div>
+              <div class="field"><label>${this.fieldLabel('Internal %', 'เรท tier ที่ใช้สุ่มจริงหลังบ้าน')}</label><input type="number" step="0.01" min="0" max="100" data-tier-field="rate" value="${this.escAttr(tier.rate ?? 0)}"></div>
+              <div class="field"><label>${this.fieldLabel('Public %', 'เรท tier ที่แสดงหน้ารางวัล แยกจากเรทสุ่มจริงได้')}</label><input type="number" step="0.01" min="0" max="100" data-tier-field="displayRate" value="${this.escAttr(tier.displayRate ?? tier.rate ?? 0)}"></div>
             </div>
             <div class="field"><label>${this.fieldLabel('Summary', 'คำอธิบายสั้นของ tier ใช้แสดงในหน้ารางวัล')}</label><input data-tier-field="summary" value="${this.escAttr(tier.summary || '')}"></div>
             <div class="inline fields">
@@ -6812,6 +7067,20 @@
       const nextMap = this.gachaRebalancePercentages(prizePool, prizeId, nextPercent);
       nextMap.forEach((percent, id) => this[setterName](id, percent));
       this.renderGachaRateOverview();
+    },
+    bindGachaTierGridPercentInputs() {
+      $('#gachaTierGrid [data-tier-field="rate"]').off('change.gachaTierPercent').on('change.gachaTierPercent', (e) => {
+        const input = $(e.currentTarget);
+        const tierId = String(input.closest('[data-tier-id]').data('tier-id') || '');
+        if (!tierId) return;
+        this.applyGachaOverviewTierPercent(tierId, Number(input.val() || 0), 'rate', 'active', 'gachaSetTierRateValue');
+      });
+      $('#gachaTierGrid [data-tier-field="displayRate"]').off('change.gachaTierPercent').on('change.gachaTierPercent', (e) => {
+        const input = $(e.currentTarget);
+        const tierId = String(input.closest('[data-tier-id]').data('tier-id') || '');
+        if (!tierId) return;
+        this.applyGachaOverviewTierPercent(tierId, Number(input.val() || 0), 'displayRate', 'visible', 'gachaSetTierDisplayRateValue');
+      });
     },
     renderGachaPrizeList(type, selector) {
       const prizes = (this.state.gachaConfig?.prizes || [])
@@ -8288,6 +8557,7 @@
           }
         });
       this.bindGachaRateOverviewControls();
+      this.bindGachaTierGridPercentInputs();
       $('#gachaTierGrid [data-tier-field], #gachaItemPrizeList [data-prize-field], #gachaRolePrizeList [data-role-config-field], #gachaRolePrizeList [data-role-config-entry-field], #gachaRolePrizeList [data-role-child-enabled], #gachaRolePrizeList [data-role-child-override-toggle], #gachaRolePrizeList [data-role-child-override-value]')
         .off('change.gachaOverviewSync')
         .on('change.gachaOverviewSync', () => this.renderGachaRateOverview());

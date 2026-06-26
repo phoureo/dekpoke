@@ -7,7 +7,7 @@ require __DIR__ . '/../init.php';
 Auth::requireUser();
 
 $page = strtolower((string) ($_GET['page'] ?? 'activity'));
-$allowed = ['roles', 'messages', 'activity', 'gacha_prize', 'gacha_campaign', 'gacha_shop', 'gacha_report', 'earn_settings', 'earn_manual', 'reward_report', 'shop_report', 'shop_member_bags', 'bag_transaction_report', 'admin', 'permission', 'backfill', 'logs'];
+$allowed = ['roles', 'messages', 'activity', 'gacha_prize', 'gacha_campaign', 'gacha_shop', 'gacha_report', 'earn_settings', 'earn_manual', 'reward_report', 'mileage_report', 'shop_report', 'shop_member_bags', 'bag_transaction_report', 'admin', 'permission', 'backfill', 'logs'];
 if (!in_array($page, $allowed, true)) {
     Response::error('Page not found.', 404);
 }

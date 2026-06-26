@@ -306,8 +306,75 @@ final class GachaConfigService
         }, array_filter($config['prizes'] ?? [], 'is_array')));
 
         usort($config['prizes'], static fn (array $a, array $b): int => ($a['sortOrder'] <=> $b['sortOrder']) ?: strcmp($a['name'], $b['name']));
+        self::normalizeTierPercentPools($config['tiers']);
+        self::normalizePrizePercentPools($config['prizes'], $tierIds);
 
         return $config;
+    }
+
+    private static function normalizeTierPercentPools(array &$tiers): void
+    {
+        self::normalizePercentPool($tiers, 'rate', static fn (array $tier): bool => !empty($tier['active']));
+        self::normalizePercentPool($tiers, 'displayRate', static fn (array $tier): bool => !empty($tier['visible']));
+    }
+
+    private static function normalizePrizePercentPools(array &$prizes, array $tierIds): void
+    {
+        foreach ($tierIds as $tierId) {
+            self::normalizePercentPool(
+                $prizes,
+                'internalWeight',
+                static fn (array $prize): bool => ($prize['tierId'] ?? '') === $tierId && !empty($prize['active'])
+            );
+            self::normalizePercentPool(
+                $prizes,
+                'displayWeight',
+                static fn (array $prize): bool => ($prize['tierId'] ?? '') === $tierId && !empty($prize['visible'])
+            );
+        }
+    }
+
+    private static function normalizePercentPool(array &$rows, string $field, callable $filter): void
+    {
+        $eligibleIndexes = [];
+        $total = 0.0;
+
+        foreach ($rows as $index => $row) {
+            if (!$filter($row)) {
+                continue;
+            }
+            $value = max(0.0, (float) ($row[$field] ?? 0));
+            if ($value <= 0) {
+                continue;
+            }
+            $eligibleIndexes[] = $index;
+            $total += $value;
+        }
+
+        if ($eligibleIndexes === [] || $total <= 0) {
+            return;
+        }
+
+        if (count($eligibleIndexes) === 1) {
+            $rows[$eligibleIndexes[0]][$field] = 100.0;
+            return;
+        }
+
+        $lastIndex = array_pop($eligibleIndexes);
+        $runningTotal = 0.0;
+
+        foreach ($eligibleIndexes as $index) {
+            $normalizedValue = self::roundPercent(((float) $rows[$index][$field] / $total) * 100);
+            $rows[$index][$field] = $normalizedValue;
+            $runningTotal += $normalizedValue;
+        }
+
+        $rows[$lastIndex][$field] = self::roundPercent(max(0.0, 100 - $runningTotal));
+    }
+
+    private static function roundPercent(float $value, int $precision = 6): float
+    {
+        return round($value, $precision);
     }
 
     public static function spinButton(array $config, int $buttonId): array

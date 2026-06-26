@@ -85,25 +85,173 @@ final class GachaMileageService
         $boardCode = self::normalizeBoardCode($payload['boardCode'] ?? $boardCode);
         $board = self::normalizeBoard($payload + ['boardCode' => $boardCode]);
         $path = self::boardPath($boardCode);
-        $dir = dirname($path);
-        if (!is_dir($dir)) {
-            if (!mkdir($dir, 0777, true) && !is_dir($dir)) {
-                throw new RuntimeException('MILEAGE_BOARD_DIR_CREATE_FAILED');
-            }
-        }
-
-        $bytes = @file_put_contents(
-            $path,
-            json_encode($board, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . PHP_EOL
-        );
-        if ($bytes === false) {
-            throw new RuntimeException('MILEAGE_BOARD_SAVE_FAILED');
-        }
-
-        @chmod($dir, 0777);
-        @chmod($path, 0666);
+        self::writeJsonFile($path, $board, 'MILEAGE_BOARD_SAVE_FAILED');
 
         return $board;
+    }
+
+    public static function editorBootstrap(string $boardCode = self::DEFAULT_BOARD_CODE): array
+    {
+        $boardCode = self::normalizeBoardCode($boardCode);
+        $live = self::loadBoardDefinition($boardCode);
+        $draft = self::loadDraftDefinition($boardCode);
+
+        return [
+            'boardCode' => $boardCode,
+            'liveBoard' => $live,
+            'draftBoard' => $draft,
+            'workingBoard' => $draft ?: $live,
+            'hasDraft' => $draft !== null,
+            'versions' => self::versionManifest($boardCode),
+            'dataUrlBlocked' => self::containsDataUrl($draft ?: $live),
+        ];
+    }
+
+    public static function draftBoardDefinition(string $boardCode = self::DEFAULT_BOARD_CODE): ?array
+    {
+        return self::loadDraftDefinition($boardCode);
+    }
+
+    public static function previewBoardDefinition(?array $payload = null, string $boardCode = self::DEFAULT_BOARD_CODE): array
+    {
+        $boardCode = self::normalizeBoardCode($payload['boardCode'] ?? $boardCode);
+        if (is_array($payload) && $payload !== []) {
+            return self::normalizeBoard($payload + ['boardCode' => $boardCode]);
+        }
+
+        return self::loadDraftDefinition($boardCode) ?: self::loadBoardDefinition($boardCode);
+    }
+
+    public static function saveDraftDefinition(array $payload, string $boardCode = self::DEFAULT_BOARD_CODE): array
+    {
+        $boardCode = self::normalizeBoardCode($payload['boardCode'] ?? $boardCode);
+        $board = self::normalizeBoard($payload + ['boardCode' => $boardCode]);
+        self::writeJsonFile(self::draftPath($boardCode), $board, 'MILEAGE_DRAFT_SAVE_FAILED');
+        self::writeDraftMeta($boardCode, [
+            'boardCode' => $boardCode,
+            'savedAt' => date(DateTimeInterface::ATOM),
+            'hasDataUrl' => self::containsDataUrl($board),
+        ]);
+        return $board;
+    }
+
+    public static function publishDraftDefinition(string $boardCode = self::DEFAULT_BOARD_CODE, ?array $payload = null): array
+    {
+        $boardCode = self::normalizeBoardCode($payload['boardCode'] ?? $boardCode);
+        $draft = $payload !== null
+            ? self::normalizeBoard($payload + ['boardCode' => $boardCode])
+            : self::loadDraftDefinition($boardCode);
+        if (!$draft) {
+            throw new RuntimeException('MILEAGE_DRAFT_NOT_FOUND');
+        }
+        if (self::containsDataUrl($draft)) {
+            throw new RuntimeException('MILEAGE_DATA_URL_ASSET_BLOCKED');
+        }
+
+        $live = self::loadBoardDefinition($boardCode);
+        $version = self::snapshotVersion($boardCode, $live, [
+            'source' => 'publish',
+            'publishedAt' => date(DateTimeInterface::ATOM),
+        ]);
+        self::writeJsonFile(self::boardPath($boardCode), $draft, 'MILEAGE_BOARD_SAVE_FAILED');
+        self::writeDraftMeta($boardCode, [
+            'boardCode' => $boardCode,
+            'savedAt' => date(DateTimeInterface::ATOM),
+            'publishedAt' => date(DateTimeInterface::ATOM),
+            'publishedVersionBefore' => $version['id'] ?? '',
+            'hasDataUrl' => false,
+        ]);
+
+        return [
+            'board' => $draft,
+            'snapshot' => $version,
+            'versions' => self::versionManifest($boardCode),
+        ];
+    }
+
+    public static function rollbackVersion(string $boardCode, string $versionId, bool $publish = false): array
+    {
+        $boardCode = self::normalizeBoardCode($boardCode);
+        $versionId = self::normalizeVersionId($versionId);
+        $path = self::versionPath($boardCode, $versionId);
+        if (!is_file($path)) {
+            throw new RuntimeException('MILEAGE_VERSION_NOT_FOUND');
+        }
+
+        $decoded = json_decode((string) file_get_contents($path), true);
+        $board = self::normalizeBoard(is_array($decoded) ? $decoded : ['boardCode' => $boardCode]);
+        if (self::containsDataUrl($board)) {
+            throw new RuntimeException('MILEAGE_DATA_URL_ASSET_BLOCKED');
+        }
+
+        if ($publish) {
+            self::snapshotVersion($boardCode, self::loadBoardDefinition($boardCode), [
+                'source' => 'rollback',
+                'rollbackFrom' => $versionId,
+                'publishedAt' => date(DateTimeInterface::ATOM),
+            ]);
+            self::writeJsonFile(self::boardPath($boardCode), $board, 'MILEAGE_BOARD_SAVE_FAILED');
+        }
+
+        self::writeJsonFile(self::draftPath($boardCode), $board, 'MILEAGE_DRAFT_SAVE_FAILED');
+        self::writeDraftMeta($boardCode, [
+            'boardCode' => $boardCode,
+            'savedAt' => date(DateTimeInterface::ATOM),
+            'rollbackFrom' => $versionId,
+            'publishedAt' => $publish ? date(DateTimeInterface::ATOM) : null,
+            'hasDataUrl' => false,
+        ]);
+
+        return [
+            'board' => $board,
+            'published' => $publish,
+            'versions' => self::versionManifest($boardCode),
+        ];
+    }
+
+    public static function versionManifest(string $boardCode = self::DEFAULT_BOARD_CODE): array
+    {
+        $path = self::versionManifestPath($boardCode);
+        if (!is_file($path)) {
+            return [
+                'boardCode' => self::normalizeBoardCode($boardCode),
+                'versions' => [],
+            ];
+        }
+        $decoded = json_decode((string) file_get_contents($path), true);
+        if (!is_array($decoded)) {
+            return [
+                'boardCode' => self::normalizeBoardCode($boardCode),
+                'versions' => [],
+            ];
+        }
+        $decoded['versions'] = array_values(array_filter(
+            is_array($decoded['versions'] ?? null) ? $decoded['versions'] : [],
+            static fn (mixed $item): bool => is_array($item) && trim((string) ($item['id'] ?? '')) !== ''
+        ));
+        return $decoded + ['boardCode' => self::normalizeBoardCode($boardCode)];
+    }
+
+    public static function previewRewardDefinition(array $reward, string $boardCode = self::DEFAULT_BOARD_CODE): array
+    {
+        $board = self::loadBoardDefinition($boardCode);
+        $rewardTemplateId = trim((string) ($reward['rewardTemplateId'] ?? ($reward['meta']['rewardTemplateId'] ?? '')));
+        $resolvedBundle = null;
+        if ($rewardTemplateId !== '' && class_exists('RewardTemplateService')) {
+            $resolvedBundle = RewardTemplateService::resolveTemplate(
+                $rewardTemplateId,
+                isset($reward['stepIndex']) && $reward['stepIndex'] !== null ? (int) $reward['stepIndex'] : null
+            );
+        }
+
+        return [
+            'ok' => true,
+            'boardCode' => (string) ($board['boardCode'] ?? self::DEFAULT_BOARD_CODE),
+            'reward' => $reward,
+            'rewardTemplateId' => $rewardTemplateId,
+            'resolved' => is_array($resolvedBundle) ? $resolvedBundle : null,
+            'simulationOnly' => true,
+        ];
     }
 
     public static function summary(string $guildId, string $userId = '', string $boardCode = self::DEFAULT_BOARD_CODE): array
@@ -191,15 +339,16 @@ final class GachaMileageService
             ],
             'players' => $guildId !== '' ? self::visiblePlayers($guildId, $board) : [],
             'self' => $userId !== '' ? self::playerPayloadByUserId($guildId, $userId, $board) : null,
-            'leaderboard' => $guildId !== '' ? self::leaderboard($guildId, $boardCode) : ['all' => [], 'weekly' => []],
+            'leaderboard' => $guildId !== '' ? self::leaderboard($guildId, $boardCode, 300, $userId) : ['all' => [], 'weekly' => []],
         ];
     }
 
-    public static function leaderboard(string $guildId, string $boardCode = self::DEFAULT_BOARD_CODE, int $limit = 300): array
+    public static function leaderboard(string $guildId, string $boardCode = self::DEFAULT_BOARD_CODE, int $limit = 300, string $focusUserId = ''): array
     {
         self::ensureSchema();
 
         $guildId = trim($guildId);
+        $focusUserId = trim($focusUserId);
         $board = self::loadBoardDefinition($boardCode);
         $boardCode = (string) ($board['boardCode'] ?? self::DEFAULT_BOARD_CODE);
         $limit = max(1, min(500, $limit));
@@ -280,11 +429,82 @@ final class GachaMileageService
             ]
         );
 
+        if ($focusUserId !== '') {
+            $focusAllRow = self::leaderboardFocusAllRow($guildId, $boardCode, $focusUserId);
+            if ($focusAllRow && !self::rowsContainUser($allRows, $focusUserId)) {
+                $allRows[] = $focusAllRow;
+            }
+            $focusWeeklyRow = self::leaderboardFocusWeeklyRow($guildId, $boardCode, $focusUserId, $weekStart);
+            if ($focusWeeklyRow && !self::rowsContainUser($weeklyRows, $focusUserId)) {
+                $weeklyRows[] = $focusWeeklyRow;
+            }
+        }
+
         return [
             'all' => self::leaderboardRowsPayload($guildId, $board, $allRows, 'lifetimeSteps'),
             'weekly' => self::leaderboardRowsPayload($guildId, $board, $weeklyRows, 'weeklySteps'),
             'weekStart' => $weekStart->format(DateTimeInterface::ATOM),
         ];
+    }
+
+    public static function stepPlayers(string $guildId, string $boardCode = self::DEFAULT_BOARD_CODE, int $stepIndex = -1, int $limit = 200): array
+    {
+        self::ensureSchema();
+
+        $guildId = trim($guildId);
+        $board = self::loadBoardDefinition($boardCode);
+        $boardCode = (string) ($board['boardCode'] ?? self::DEFAULT_BOARD_CODE);
+        $stepIndex = max(-1, min(self::maxStepIndex($board), $stepIndex));
+        $limit = max(1, min(500, $limit));
+
+        if ($guildId === '' || $stepIndex < 0) {
+            return [];
+        }
+
+        $targetLifetime = $stepIndex >= self::maxStepIndex($board)
+            ? self::maxStepIndex($board) + 1
+            : $stepIndex + 1;
+        $targetComparator = $stepIndex >= self::maxStepIndex($board) ? '>=' : '=';
+
+        $rows = Database::fetchAll(
+            'SELECT p.userId,
+                    p.lifetimeSteps,
+                    p.positionStep,
+                    p.lastAnimatedStep,
+                    COALESCE(p.updateDate, p.createDate) AS activityDate,
+                    u.userName,
+                    u.globalName,
+                    u.avatarHash,
+                    m.nickName,
+                    m.guildAvatarHash
+               FROM tbl_gacha_mileage_progress p
+          LEFT JOIN tbl_user u
+                 ON u.userId = p.userId
+          LEFT JOIN tbl_member m
+                 ON m.guildId = p.guildId
+                AND m.userId = p.userId
+              WHERE p.guildId = :guildId
+                AND p.boardCode = :boardCode
+                AND p.lifetimeSteps ' . $targetComparator . ' :targetLifetime
+              ORDER BY activityDate DESC, p.gachaMileageProgressId DESC
+              LIMIT ' . $limit,
+            [
+                'guildId' => $guildId,
+                'boardCode' => $boardCode,
+                'targetLifetime' => $targetLifetime,
+            ]
+        );
+
+        $players = [];
+        foreach ($rows as $row) {
+            $payload = self::playerPayloadFromProgressRow($guildId, $board, $row);
+            if ((int) ($payload['positionStep'] ?? -1) !== $stepIndex) {
+                continue;
+            }
+            $players[] = $payload;
+        }
+
+        return $players;
     }
 
     public static function recordCompletedSpin(
@@ -476,6 +696,9 @@ final class GachaMileageService
                 ],
                 'steps' => [],
                 'rewards' => [],
+                'iconTemplates' => [],
+                'rewardTemplates' => [],
+                'rewardNodes' => [],
             ]);
         }
 
@@ -487,25 +710,35 @@ final class GachaMileageService
     {
         $boardCode = self::normalizeBoardCode($board['boardCode'] ?? self::DEFAULT_BOARD_CODE);
         $image = is_array($board['image'] ?? null) ? $board['image'] : [];
-        $steps = self::normalizeSteps($board['steps'] ?? []);
-        $rewards = self::normalizeRewards($board['rewards'] ?? [], $steps);
-        $sprites = self::normalizeSprites($board['sprites'] ?? []);
-        $entry = self::normalizeEntryPoint($board['entry'] ?? null, $steps);
+        $imageWidth = max(1, (int) ($image['width'] ?? 1));
+        $sourceHeight = max(1, (int) ($image['height'] ?? 1));
+        $segments = self::normalizeSegments($image['segments'] ?? [], $image);
+        $imageHeight = self::segmentsHeight($segments);
+        $steps = self::normalizeSteps($board['steps'] ?? [], $segments, $imageWidth, $sourceHeight);
+        $rewards = self::normalizeRewards($board['rewards'] ?? [], $steps, $segments, $imageWidth, $sourceHeight);
+        $sprites = self::normalizeSprites($board['sprites'] ?? [], $segments, $imageWidth, $sourceHeight);
+        $iconTemplates = self::normalizeIconTemplates($board['iconTemplates'] ?? []);
+        $rewardTemplates = self::normalizeRewardTemplates($board['rewardTemplates'] ?? []);
+        $rewardNodes = self::normalizeRewardNodes($board['rewardNodes'] ?? [], $steps, $iconTemplates, $rewardTemplates, $segments, $imageWidth, $sourceHeight);
+        $entry = self::normalizeEntryPoint($board['entry'] ?? null, $steps, $segments, $imageWidth, $sourceHeight);
 
         return [
             'boardCode' => $boardCode,
-            'version' => max(1, (int) ($board['version'] ?? 1)),
+            'version' => max(2, (int) ($board['version'] ?? 2)),
             'title' => trim((string) ($board['title'] ?? 'Mileage Board')) ?: 'Mileage Board',
             'entry' => $entry,
             'image' => [
-                'width' => max(1, (int) ($image['width'] ?? 1)),
-                'height' => max(1, (int) ($image['height'] ?? 1)),
+                'width' => $imageWidth,
+                'height' => $imageHeight,
                 'source' => trim((string) ($image['source'] ?? '')),
-                'segments' => self::normalizeSegments($image['segments'] ?? []),
+                'segments' => $segments,
             ],
             'steps' => $steps,
             'rewards' => $rewards,
             'sprites' => $sprites,
+            'iconTemplates' => $iconTemplates,
+            'rewardTemplates' => $rewardTemplates,
+            'rewardNodes' => $rewardNodes,
             'meta' => self::normalizeBoardMeta($board['meta'] ?? []),
         ];
     }
@@ -527,42 +760,95 @@ final class GachaMileageService
         $out['ui']['currencyPickup'] = $currencyPickup;
         $out['ui']['currencyPickup']['scale'] = max(0.7, min(2.4, $pickupScale));
         $out['ui']['currencyPickup']['countMultiplier'] = max(0.7, min(3.2, $pickupCountMultiplier));
+        $fx = is_array($out['fx'] ?? null) ? $out['fx'] : [];
+        $out['fx'] = [
+            'pathGlow' => max(0, min(2, (float) ($fx['pathGlow'] ?? 1))),
+            'pathLine' => max(0, min(2, (float) ($fx['pathLine'] ?? 1))),
+            'clouds' => max(0, min(2, (float) ($fx['clouds'] ?? 1))),
+            'ambience' => max(0, min(2, (float) ($fx['ambience'] ?? 1))),
+            'friendCount' => max(0, min(12, (int) ($fx['friendCount'] ?? 3))),
+            'selfPulse' => max(0, min(2, (float) ($fx['selfPulse'] ?? 1))),
+        ];
+        $editor = is_array($out['editor'] ?? null) ? $out['editor'] : [];
+        $out['editor'] = $editor + [
+            'layerPolicy' => 'path-first',
+        ];
 
         return $out;
     }
 
-    private static function normalizeSegments(mixed $segments): array
+    // MILEAGE_SEGMENT_MODEL_V2: segments are the authoritative scene source and define board stacking.
+    private static function normalizeSegments(mixed $segments, array $image = []): array
     {
         $out = [];
         foreach (is_array($segments) ? $segments : [] as $segment) {
             if (!is_array($segment)) {
                 continue;
             }
-            $src = trim((string) ($segment['src'] ?? ''));
-            if ($src === '') {
+            $out[] = [
+                'id' => self::normalizeSegmentId($segment['id'] ?? ('segment_' . str_pad((string) (count($out) + 1), 3, '0', STR_PAD_LEFT))),
+                'src' => trim((string) ($segment['src'] ?? '')),
+                'h' => max(1, (int) ($segment['h'] ?? 1)),
+                'y' => 0,
+            ];
+        }
+
+        if (!$out) {
+            $legacySource = trim((string) ($image['source'] ?? ''));
+            if ($legacySource !== '') {
+                $out[] = [
+                    'id' => 'segment_001',
+                    'src' => $legacySource,
+                    'h' => max(1, (int) ($image['height'] ?? 1)),
+                    'y' => 0,
+                ];
+            }
+        }
+
+        return self::finalizeSegments($out);
+    }
+
+    private static function finalizeSegments(array $segments): array
+    {
+        $cursor = 0;
+        $out = [];
+        foreach ($segments as $index => $segment) {
+            if (!is_array($segment)) {
                 continue;
             }
+            $height = max(1, (int) ($segment['h'] ?? 1));
+            $id = self::normalizeSegmentId($segment['id'] ?? ('segment_' . str_pad((string) ($index + 1), 3, '0', STR_PAD_LEFT)));
             $out[] = [
-                'src' => $src,
-                'y' => max(0, (int) ($segment['y'] ?? 0)),
-                'h' => max(1, (int) ($segment['h'] ?? 1)),
+                'id' => $id,
+                'src' => trim((string) ($segment['src'] ?? '')),
+                'h' => $height,
+                'y' => $cursor,
             ];
+            $cursor += $height;
         }
         return $out;
     }
 
-    private static function normalizeSteps(mixed $steps): array
+    private static function normalizeSteps(mixed $steps, array $segments, int $boardWidth, int $sourceHeight): array
     {
         $out = [];
         foreach (is_array($steps) ? $steps : [] as $index => $step) {
             if (!is_array($step)) {
                 continue;
             }
+            $point = self::normalizeBoardPointReference($step, $segments, $boardWidth, $sourceHeight);
             $out[] = [
                 'i' => count($out),
-                'x' => self::normalizeUnitFloat($step['x'] ?? 0),
-                'y' => self::normalizeUnitFloat($step['y'] ?? 0),
+                'segmentId' => $point['segmentId'],
+                'localX' => $point['localX'],
+                'localY' => $point['localY'],
+                'x' => $point['x'],
+                'y' => $point['y'],
                 'label' => trim((string) ($step['label'] ?? '')),
+                'visible' => ($step['visible'] ?? true) !== false,
+                'locked' => ($step['locked'] ?? false) === true,
+                'layerSlot' => self::normalizeLayerSlot($step['layerSlot'] ?? 'path'),
+                'zIndex' => (int) ($step['zIndex'] ?? $index),
                 'meta' => is_array($step['meta'] ?? null) ? $step['meta'] : [],
             ];
             unset($index);
@@ -570,7 +856,7 @@ final class GachaMileageService
         return $out;
     }
 
-    private static function normalizeRewards(mixed $rewards, array $steps): array
+    private static function normalizeRewards(mixed $rewards, array $steps, array $segments, int $boardWidth, int $sourceHeight): array
     {
         $out = [];
         foreach (is_array($rewards) ? $rewards : [] as $index => $reward) {
@@ -593,12 +879,8 @@ final class GachaMileageService
                 $stepIndex = null;
             }
 
-            $x = self::nullableUnitFloat($reward['x'] ?? null);
-            $y = self::nullableUnitFloat($reward['y'] ?? null);
-            if (($x === null || $y === null) && $stepIndex !== null && isset($steps[$stepIndex])) {
-                $x = $steps[$stepIndex]['x'];
-                $y = $steps[$stepIndex]['y'];
-            }
+            $fallbackPoint = $stepIndex !== null && isset($steps[$stepIndex]) ? $steps[$stepIndex] : null;
+            $point = self::normalizeBoardPointReference($reward, $segments, $boardWidth, $sourceHeight, $fallbackPoint);
 
             $kind = self::normalizeRewardKind((string) ($reward['kind'] ?? 'coin'));
             $amount = max(0, (int) ($reward['amount'] ?? ($kind === 'item' ? 1 : 0)));
@@ -609,12 +891,21 @@ final class GachaMileageService
             $out[] = [
                 'id' => $id,
                 'stepIndex' => $stepIndex,
-                'x' => $x,
-                'y' => $y,
+                'segmentId' => $point['segmentId'],
+                'localX' => $point['localX'],
+                'localY' => $point['localY'],
+                'x' => $point['x'],
+                'y' => $point['y'],
                 'kind' => $kind,
                 'amount' => $amount,
                 'itemCode' => trim((string) ($reward['itemCode'] ?? '')),
+                'rewardTemplateId' => trim((string) ($reward['rewardTemplateId'] ?? '')),
+                'iconTemplateId' => trim((string) ($reward['iconTemplateId'] ?? '')),
                 'label' => trim((string) ($reward['label'] ?? '')),
+                'visible' => ($reward['visible'] ?? true) !== false,
+                'locked' => ($reward['locked'] ?? false) === true,
+                'layerSlot' => self::normalizeLayerSlot($reward['layerSlot'] ?? 'reward'),
+                'zIndex' => (int) ($reward['zIndex'] ?? $index),
                 'meta' => is_array($reward['meta'] ?? null) ? $reward['meta'] : [],
             ];
             unset($index);
@@ -630,7 +921,7 @@ final class GachaMileageService
             : 'coin';
     }
 
-    private static function normalizeSprites(mixed $sprites): array
+    private static function normalizeSprites(mixed $sprites, array $segments, int $boardWidth, int $sourceHeight): array
     {
         $out = [];
         foreach (is_array($sprites) ? $sprites : [] as $index => $sprite) {
@@ -647,8 +938,21 @@ final class GachaMileageService
             $rows = max(1, (int) ($sprite['rows'] ?? 1));
             $maxFrames = max(1, $columns * $rows);
             $mode = strtolower(trim((string) ($sprite['mode'] ?? 'loop')));
-            if (!in_array($mode, ['once', 'loop', 'pingpong'], true)) {
+            if (!in_array($mode, ['once', 'loop', 'pingpong', 'static'], true)) {
                 $mode = 'loop';
+            }
+            $enabledStates = [];
+            foreach (is_array($sprite['enabledStates'] ?? null) ? $sprite['enabledStates'] : ['idle'] as $stateName) {
+                $normalizedStateName = trim((string) $stateName);
+                if ($normalizedStateName === 'notready') {
+                    $normalizedStateName = 'notReady';
+                }
+                if (in_array($normalizedStateName, ['idle', 'touch', 'notReady', 'ready', 'claimed'], true) && !in_array($normalizedStateName, $enabledStates, true)) {
+                    $enabledStates[] = $normalizedStateName;
+                }
+            }
+            if (!in_array('idle', $enabledStates, true)) {
+                array_unshift($enabledStates, 'idle');
             }
 
             $id = trim((string) ($sprite['id'] ?? ''));
@@ -656,12 +960,17 @@ final class GachaMileageService
                 $id = 'sprite_' . str_pad((string) (count($out) + 1), 3, '0', STR_PAD_LEFT);
             }
 
+            $rawStepIndex = $sprite['stepIndex'] ?? (is_array($sprite['meta'] ?? null) ? ($sprite['meta']['stepIndex'] ?? -1) : -1);
+            $point = self::normalizeBoardPointReference($sprite, $segments, $boardWidth, $sourceHeight);
             $out[] = [
                 'id' => $id,
                 'label' => trim((string) ($sprite['label'] ?? '')),
                 'src' => $src,
-                'x' => self::normalizeUnitFloat($sprite['x'] ?? 0),
-                'y' => self::normalizeUnitFloat($sprite['y'] ?? 0),
+                'segmentId' => $point['segmentId'],
+                'localX' => $point['localX'],
+                'localY' => $point['localY'],
+                'x' => $point['x'],
+                'y' => $point['y'],
                 'width' => max(1, (int) ($sprite['width'] ?? 48)),
                 'height' => max(1, (int) ($sprite['height'] ?? 48)),
                 'columns' => $columns,
@@ -672,9 +981,190 @@ final class GachaMileageService
                 'fps' => max(1, min(60, (float) ($sprite['fps'] ?? 12))),
                 'mode' => $mode,
                 'autoplay' => ($sprite['autoplay'] ?? true) !== false,
+                'visible' => ($sprite['visible'] ?? true) !== false,
+                'locked' => ($sprite['locked'] ?? false) === true,
+                'layerSlot' => self::normalizeLayerSlot($sprite['layerSlot'] ?? 'decor-back'),
+                'zIndex' => (int) ($sprite['zIndex'] ?? $index),
+                'stepIndex' => max(-1, (int) $rawStepIndex),
+                'enabledStates' => $enabledStates,
+                'states' => self::normalizeAnimationStates($sprite['states'] ?? []),
                 'meta' => is_array($sprite['meta'] ?? null) ? $sprite['meta'] : [],
             ];
             unset($index);
+        }
+        return $out;
+    }
+
+    private static function normalizeIconTemplates(mixed $templates): array
+    {
+        $out = [];
+        foreach (is_array($templates) ? $templates : [] as $template) {
+            if (!is_array($template)) {
+                continue;
+            }
+
+            $templateId = trim((string) ($template['id'] ?? ''));
+            if ($templateId === '') {
+                $templateId = 'icon_' . str_pad((string) (count($out) + 1), 3, '0', STR_PAD_LEFT);
+            }
+            $columns = max(1, min(512, (int) ($template['columns'] ?? 1)));
+            $rows = max(1, min(512, (int) ($template['rows'] ?? 1)));
+            $maxFrames = max(1, $columns * $rows);
+            $mode = strtolower(trim((string) ($template['mode'] ?? 'loop')));
+            if (!in_array($mode, ['loop', 'once', 'pingpong'], true)) {
+                $mode = 'loop';
+            }
+
+            $out[] = [
+                'id' => $templateId,
+                'label' => trim((string) ($template['label'] ?? '')),
+                'src' => trim((string) ($template['src'] ?? '')),
+                'frameX' => max(0, (int) ($template['frameX'] ?? 0)),
+                'frameY' => max(0, (int) ($template['frameY'] ?? 0)),
+                'frameWidth' => max(0, (int) ($template['frameWidth'] ?? 0)),
+                'frameHeight' => max(0, (int) ($template['frameHeight'] ?? 0)),
+                'columns' => $columns,
+                'rows' => $rows,
+                'frameCount' => max(1, min($maxFrames, (int) ($template['frameCount'] ?? 1))),
+                'fps' => max(1, min(60, (float) ($template['fps'] ?? 12))),
+                'mode' => $mode,
+                'scale' => max(0.1, min(4, (float) ($template['scale'] ?? 1))),
+                'anchorX' => max(0, min(1, (float) ($template['anchorX'] ?? 0.5))),
+                'anchorY' => max(0, min(1, (float) ($template['anchorY'] ?? 0.5))),
+                'offsetX' => (float) ($template['offsetX'] ?? 0),
+                'offsetY' => (float) ($template['offsetY'] ?? 0),
+                'states' => self::normalizeAnimationStates($template['states'] ?? []),
+                'meta' => is_array($template['meta'] ?? null) ? $template['meta'] : [],
+            ];
+        }
+        return $out;
+    }
+
+    private static function normalizeRewardTemplates(mixed $templates): array
+    {
+        $out = [];
+        foreach (is_array($templates) ? $templates : [] as $template) {
+            if (!is_array($template)) {
+                continue;
+            }
+
+            $templateId = trim((string) ($template['id'] ?? ''));
+            if ($templateId === '') {
+                $templateId = 'reward_template_' . str_pad((string) (count($out) + 1), 3, '0', STR_PAD_LEFT);
+            }
+
+            $out[] = [
+                'id' => $templateId,
+                'label' => trim((string) ($template['label'] ?? '')),
+                'rewardTemplateId' => trim((string) ($template['rewardTemplateId'] ?? '')),
+                'mode' => strtolower(trim((string) ($template['mode'] ?? 'fixed'))) === 'random' ? 'random' : 'fixed',
+                'meta' => is_array($template['meta'] ?? null) ? $template['meta'] : [],
+            ];
+        }
+        return $out;
+    }
+
+    private static function normalizeRewardNodes(mixed $nodes, array $steps, array $iconTemplates, array $rewardTemplates, array $segments, int $boardWidth, int $sourceHeight): array
+    {
+        $iconTemplateIds = array_fill_keys(array_map(static fn (array $template): string => (string) ($template['id'] ?? ''), $iconTemplates), true);
+        $rewardTemplateIds = array_fill_keys(array_map(static fn (array $template): string => (string) ($template['id'] ?? ''), $rewardTemplates), true);
+        $out = [];
+
+        foreach (is_array($nodes) ? $nodes : [] as $node) {
+            if (!is_array($node)) {
+                continue;
+            }
+
+            $nodeId = trim((string) ($node['id'] ?? ''));
+            if ($nodeId === '') {
+                $nodeId = 'reward_node_' . str_pad((string) (count($out) + 1), 3, '0', STR_PAD_LEFT);
+            }
+
+            $stepIndex = null;
+            if ($node['stepIndex'] ?? null || ($node['stepIndex'] ?? null) === 0 || ($node['stepIndex'] ?? null) === '0') {
+                $stepIndex = max(0, (int) $node['stepIndex']);
+                if (!isset($steps[$stepIndex])) {
+                    $stepIndex = null;
+                }
+            }
+
+            $fallbackPoint = $stepIndex !== null && isset($steps[$stepIndex]) ? $steps[$stepIndex] : null;
+            $point = self::normalizeBoardPointReference($node, $segments, $boardWidth, $sourceHeight, $fallbackPoint);
+
+            $iconTemplateId = trim((string) ($node['iconTemplateId'] ?? ''));
+            if ($iconTemplateId !== '' && !isset($iconTemplateIds[$iconTemplateId])) {
+                $iconTemplateId = '';
+            }
+
+            $rewardTemplateId = trim((string) ($node['rewardTemplateId'] ?? ''));
+            if ($rewardTemplateId !== '' && !isset($rewardTemplateIds[$rewardTemplateId])) {
+                $rewardTemplateId = '';
+            }
+
+            $out[] = [
+                'id' => $nodeId,
+                'stepIndex' => $stepIndex,
+                'segmentId' => $point['segmentId'],
+                'localX' => $point['localX'],
+                'localY' => $point['localY'],
+                'x' => $point['x'],
+                'y' => $point['y'],
+                'iconTemplateId' => $iconTemplateId,
+                'rewardTemplateId' => $rewardTemplateId,
+                'label' => trim((string) ($node['label'] ?? '')),
+                'visible' => ($node['visible'] ?? true) !== false,
+                'locked' => ($node['locked'] ?? false) === true,
+                'layerSlot' => self::normalizeLayerSlot($node['layerSlot'] ?? 'reward'),
+                'zIndex' => (int) ($node['zIndex'] ?? count($out)),
+                'meta' => is_array($node['meta'] ?? null) ? $node['meta'] : [],
+            ];
+        }
+
+        return $out;
+    }
+
+    private static function normalizeLayerSlot(mixed $value): string
+    {
+        $slot = strtolower(trim((string) $value));
+        return in_array($slot, ['background', 'decor-back', 'path', 'reward', 'decor-front', 'fx-front'], true)
+            ? $slot
+            : 'decor-back';
+    }
+
+    private static function normalizeAnimationStates(mixed $states): array
+    {
+        $out = [];
+        foreach (is_array($states) ? $states : [] as $key => $state) {
+            $name = strtolower(trim((string) $key));
+            if (!in_array($name, ['idle', 'touch', 'notReady', 'notready', 'ready', 'claimed'], true) || !is_array($state)) {
+                continue;
+            }
+            if ($name === 'notready') {
+                $name = 'notReady';
+            }
+            $columns = max(1, min(512, (int) ($state['columns'] ?? 1)));
+            $rows = max(1, min(512, (int) ($state['rows'] ?? 1)));
+            $maxFrames = max(1, $columns * $rows);
+            $mode = strtolower(trim((string) ($state['mode'] ?? 'loop')));
+            if (!in_array($mode, ['loop', 'once', 'pingpong', 'static'], true)) {
+                $mode = 'loop';
+            }
+            $out[$name] = [
+                'label' => trim((string) ($state['label'] ?? '')),
+                'frameX' => max(0, (int) ($state['frameX'] ?? 0)),
+                'frameY' => max(0, (int) ($state['frameY'] ?? 0)),
+                'frameWidth' => max(0, (int) ($state['frameWidth'] ?? 0)),
+                'frameHeight' => max(0, (int) ($state['frameHeight'] ?? 0)),
+                'columns' => $columns,
+                'rows' => $rows,
+                'frameCount' => max(1, min($maxFrames, (int) ($state['frameCount'] ?? 1))),
+                'frameIndex' => max(0, min($maxFrames - 1, (int) ($state['frameIndex'] ?? 0))),
+                'fps' => max(1, min(60, (float) ($state['fps'] ?? 12))),
+                'mode' => $mode,
+                'width' => max(0, (int) ($state['width'] ?? 0)),
+                'height' => max(0, (int) ($state['height'] ?? 0)),
+                'opacity' => max(0, min(1, (float) ($state['opacity'] ?? 1))),
+            ];
         }
         return $out;
     }
@@ -689,6 +1179,141 @@ final class GachaMileageService
     private static function boardPath(string $boardCode): string
     {
         return Bootstrap::rootPath('gacha/data/mileage/board-' . self::normalizeBoardCode($boardCode) . '.v1.json');
+    }
+
+    private static function draftPath(string $boardCode): string
+    {
+        return Bootstrap::rootPath('gacha/data/mileage/drafts/board-' . self::normalizeBoardCode($boardCode) . '.draft.json');
+    }
+
+    private static function draftMetaPath(string $boardCode): string
+    {
+        return Bootstrap::rootPath('gacha/data/mileage/drafts/board-' . self::normalizeBoardCode($boardCode) . '.draft.meta.json');
+    }
+
+    private static function versionDir(string $boardCode): string
+    {
+        return Bootstrap::rootPath('gacha/data/mileage/versions/' . self::normalizeBoardCode($boardCode));
+    }
+
+    private static function versionManifestPath(string $boardCode): string
+    {
+        return self::versionDir($boardCode) . DIRECTORY_SEPARATOR . 'manifest.json';
+    }
+
+    private static function versionPath(string $boardCode, string $versionId): string
+    {
+        return self::versionDir($boardCode) . DIRECTORY_SEPARATOR . self::normalizeVersionId($versionId) . '.json';
+    }
+
+    private static function normalizeVersionId(string $versionId): string
+    {
+        $normalized = preg_replace('/[^a-z0-9_-]+/i', '-', strtolower(trim($versionId))) ?? '';
+        $normalized = trim($normalized, '-_');
+        if ($normalized === '') {
+            throw new RuntimeException('MILEAGE_VERSION_ID_REQUIRED');
+        }
+        return $normalized;
+    }
+
+    private static function writeJsonFile(string $path, array $payload, string $errorCode): void
+    {
+        $dir = dirname($path);
+        if (!is_dir($dir) && !mkdir($dir, 0777, true) && !is_dir($dir)) {
+            throw new RuntimeException('MILEAGE_DIR_CREATE_FAILED');
+        }
+
+        $bytes = @file_put_contents(
+            $path,
+            json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . PHP_EOL,
+            LOCK_EX
+        );
+        if ($bytes === false) {
+            throw new RuntimeException($errorCode);
+        }
+
+        @chmod($dir, 0777);
+        @chmod($path, 0666);
+    }
+
+    private static function loadDraftDefinition(string $boardCode): ?array
+    {
+        $path = self::draftPath($boardCode);
+        if (!is_file($path)) {
+            return null;
+        }
+        $decoded = json_decode((string) file_get_contents($path), true);
+        if (!is_array($decoded)) {
+            return null;
+        }
+        return self::normalizeBoard($decoded + ['boardCode' => self::normalizeBoardCode($boardCode)]);
+    }
+
+    private static function writeDraftMeta(string $boardCode, array $meta): void
+    {
+        self::writeJsonFile(
+            self::draftMetaPath($boardCode),
+            array_filter($meta, static fn (mixed $value): bool => $value !== null),
+            'MILEAGE_DRAFT_META_SAVE_FAILED'
+        );
+    }
+
+    private static function snapshotVersion(string $boardCode, array $board, array $meta = []): array
+    {
+        $boardCode = self::normalizeBoardCode($boardCode);
+        $hash = substr(hash('sha256', json_encode($board, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: random_bytes(8)), 0, 6);
+        $id = strtolower(date('Ymd-His') . '-' . $hash);
+        $path = self::versionPath($boardCode, $id);
+        self::writeJsonFile($path, $board, 'MILEAGE_VERSION_SAVE_FAILED');
+
+        $entry = [
+            'id' => $id,
+            'boardCode' => $boardCode,
+            'createdAt' => date(DateTimeInterface::ATOM),
+            'title' => trim((string) ($board['title'] ?? 'Mileage Board')) ?: 'Mileage Board',
+            'stepCount' => count($board['steps'] ?? []),
+            'rewardCount' => count($board['rewards'] ?? []),
+            'rewardNodeCount' => count($board['rewardNodes'] ?? []),
+            'spriteCount' => count($board['sprites'] ?? []),
+            'hash' => $hash,
+            'meta' => $meta,
+        ];
+
+        $manifest = self::versionManifest($boardCode);
+        $versions = is_array($manifest['versions'] ?? null) ? $manifest['versions'] : [];
+        array_unshift($versions, $entry);
+        $seen = [];
+        $versions = array_values(array_filter($versions, static function (array $item) use (&$seen): bool {
+            $id = trim((string) ($item['id'] ?? ''));
+            if ($id === '' || isset($seen[$id])) {
+                return false;
+            }
+            $seen[$id] = true;
+            return true;
+        }));
+        $manifest = [
+            'boardCode' => $boardCode,
+            'updatedAt' => date(DateTimeInterface::ATOM),
+            'versions' => $versions,
+        ];
+        self::writeJsonFile(self::versionManifestPath($boardCode), $manifest, 'MILEAGE_VERSION_MANIFEST_SAVE_FAILED');
+
+        return $entry;
+    }
+
+    private static function containsDataUrl(mixed $value): bool
+    {
+        if (is_string($value)) {
+            return str_starts_with(strtolower(trim($value)), 'data:');
+        }
+        if (is_array($value)) {
+            foreach ($value as $item) {
+                if (self::containsDataUrl($item)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private static function normalizeUnitFloat(mixed $value): float
@@ -712,15 +1337,119 @@ final class GachaMileageService
         ];
     }
 
-    private static function normalizeEntryPoint(mixed $entry, array $steps): array
+    private static function normalizeEntryPoint(mixed $entry, array $steps, array $segments, int $boardWidth, int $sourceHeight): array
     {
         $fallback = $steps[0] ?? self::defaultEntryPoint();
         $source = is_array($entry) ? $entry : [];
+        return self::normalizeBoardPointReference($source, $segments, $boardWidth, $sourceHeight, $fallback);
+    }
+
+    private static function normalizeSegmentId(mixed $value): string
+    {
+        $id = preg_replace('/[^a-z0-9_-]+/i', '-', strtolower(trim((string) ($value ?? '')))) ?? '';
+        $id = trim($id, '-_');
+        return $id !== '' ? $id : 'segment_001';
+    }
+
+    private static function segmentsHeight(array $segments): int
+    {
+        $height = 0;
+        foreach ($segments as $segment) {
+            $height += max(1, (int) ($segment['h'] ?? 1));
+        }
+        return max(1, $height);
+    }
+
+    private static function segmentMap(array $segments): array
+    {
+        $out = [];
+        foreach ($segments as $segment) {
+            if (!is_array($segment)) {
+                continue;
+            }
+            $segmentId = self::normalizeSegmentId($segment['id'] ?? '');
+            $out[$segmentId] = $segment + ['id' => $segmentId];
+        }
+        return $out;
+    }
+
+    private static function fallbackSegment(array $segments): array
+    {
+        return $segments[0] ?? [
+            'id' => 'segment_001',
+            'src' => '',
+            'h' => 1,
+            'y' => 0,
+        ];
+    }
+
+    private static function segmentForBoardY(array $segments, float $boardY): array
+    {
+        $last = self::fallbackSegment($segments);
+        foreach ($segments as $segment) {
+            if (!is_array($segment)) {
+                continue;
+            }
+            $last = $segment;
+            $segmentY = (float) ($segment['y'] ?? 0);
+            $segmentHeight = max(1.0, (float) ($segment['h'] ?? 1));
+            if ($boardY >= $segmentY && $boardY <= ($segmentY + $segmentHeight)) {
+                return $segment;
+            }
+        }
+        return $last;
+    }
+
+    private static function buildBoardPointPayload(array $segment, float $localX, float $localY, int $boardWidth, array $segments): array
+    {
+        $normalizedX = self::normalizeUnitFloat($localX);
+        $normalizedY = self::normalizeUnitFloat($localY);
+        $segmentHeight = max(1.0, (float) ($segment['h'] ?? 1));
+        $segmentY = max(0.0, (float) ($segment['y'] ?? 0));
+        $boardHeight = self::segmentsHeight($segments);
+        $boardX = $normalizedX * max(1, $boardWidth);
+        $boardY = $segmentY + ($normalizedY * $segmentHeight);
 
         return [
-            'x' => self::normalizeUnitFloat($source['x'] ?? ($fallback['x'] ?? 0.4123)),
-            'y' => self::normalizeUnitFloat($source['y'] ?? ($fallback['y'] ?? 0.9721)),
+            'segmentId' => self::normalizeSegmentId($segment['id'] ?? ''),
+            'localX' => $normalizedX,
+            'localY' => $normalizedY,
+            'x' => self::normalizeUnitFloat($boardX / max(1, $boardWidth)),
+            'y' => self::normalizeUnitFloat($boardY / $boardHeight),
         ];
+    }
+
+    // Legacy global points still load, but are canonicalized into segment-local coordinates here.
+    private static function normalizeBoardPointReference(mixed $value, array $segments, int $boardWidth, int $sourceHeight, ?array $fallback = null): array
+    {
+        $source = is_array($value) ? $value : [];
+        $segmentMap = self::segmentMap($segments);
+        $segmentId = self::normalizeSegmentId($source['segmentId'] ?? '');
+        if (isset($segmentMap[$segmentId]) && array_key_exists('localX', $source) && array_key_exists('localY', $source)) {
+            return self::buildBoardPointPayload(
+                $segmentMap[$segmentId],
+                (float) $source['localX'],
+                (float) $source['localY'],
+                $boardWidth,
+                $segments
+            );
+        }
+
+        $x = self::nullableUnitFloat($source['x'] ?? null);
+        $y = self::nullableUnitFloat($source['y'] ?? null);
+        if ($x !== null && $y !== null) {
+            $boardX = $x * max(1, $boardWidth);
+            $boardY = $y * max(1, $sourceHeight);
+            $segment = self::segmentForBoardY($segments, $boardY);
+            $localY = ((float) $boardY - (float) ($segment['y'] ?? 0)) / max(1.0, (float) ($segment['h'] ?? 1));
+            return self::buildBoardPointPayload($segment, $boardX / max(1, $boardWidth), $localY, $boardWidth, $segments);
+        }
+
+        if (is_array($fallback)) {
+            return self::normalizeBoardPointReference($fallback, $segments, $boardWidth, $sourceHeight, null);
+        }
+
+        return self::buildBoardPointPayload(self::fallbackSegment($segments), 0, 0, $boardWidth, $segments);
     }
 
     private static function maxStepIndex(array $board): int
@@ -835,7 +1564,7 @@ final class GachaMileageService
         }
 
         $rewards = array_values(array_filter(
-            $board['rewards'] ?? [],
+            self::boardRewardDefinitions($board),
             static fn (array $reward): bool => isset($reward['stepIndex'])
                 && $reward['stepIndex'] !== null
                 && (int) $reward['stepIndex'] >= $startStep
@@ -943,22 +1672,180 @@ final class GachaMileageService
 
         $players = [];
         foreach ($rows as $row) {
-            $lifetimeSteps = max(0, (int) ($row['lifetimeSteps'] ?? 0));
-            $positionStep = self::positionFromLifetime($lifetimeSteps, $board);
+            $payload = self::playerPayloadFromProgressRow($guildId, $board, $row);
+            $positionStep = (int) ($payload['positionStep'] ?? -1);
             if ($positionStep < 0) {
                 continue;
             }
-
-            $players[] = [
-                'userId' => (string) ($row['userId'] ?? ''),
-                'displayName' => trim((string) ($row['nickName'] ?? $row['globalName'] ?? $row['userName'] ?? 'Player')) ?: 'Player',
-                'avatarUrl' => self::rowAvatarUrl($guildId, $row),
-                'positionStep' => $positionStep,
-                'lifetimeSteps' => $lifetimeSteps,
-            ];
+            $players[] = $payload;
         }
 
         return $players;
+    }
+
+    private static function rowsContainUser(array $rows, string $userId): bool
+    {
+        $targetUserId = trim($userId);
+        foreach ($rows as $row) {
+            if (trim((string) ($row['userId'] ?? '')) === $targetUserId) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static function leaderboardFocusAllRow(string $guildId, string $boardCode, string $userId): ?array
+    {
+        $row = Database::fetch(
+            'SELECT p.gachaMileageProgressId,
+                    p.userId,
+                    p.lifetimeSteps,
+                    p.positionStep,
+                    p.lastAnimatedStep,
+                    COALESCE(p.updateDate, p.createDate) AS rankDate,
+                    u.userName,
+                    u.globalName,
+                    u.avatarHash,
+                    m.nickName,
+                    m.guildAvatarHash
+               FROM tbl_gacha_mileage_progress p
+          LEFT JOIN tbl_user u
+                 ON u.userId = p.userId
+          LEFT JOIN tbl_member m
+                 ON m.guildId = p.guildId
+                AND m.userId = p.userId
+              WHERE p.guildId = :guildId
+                AND p.boardCode = :boardCode
+                AND p.userId = :userId
+                AND p.lifetimeSteps > 0
+              LIMIT 1',
+            [
+                'guildId' => $guildId,
+                'boardCode' => $boardCode,
+                'userId' => $userId,
+            ]
+        );
+
+        if (!$row) {
+            return null;
+        }
+
+        $rank = Database::fetch(
+            'SELECT COUNT(*) AS rank
+               FROM tbl_gacha_mileage_progress p
+              WHERE p.guildId = :guildId
+                AND p.boardCode = :boardCode
+                AND p.lifetimeSteps > 0
+                AND (
+                    p.lifetimeSteps > :lifetimeStepsGreater
+                    OR (
+                        p.lifetimeSteps = :lifetimeStepsEqual
+                        AND (
+                            COALESCE(p.updateDate, p.createDate) < :rankDateBefore
+                            OR (
+                                COALESCE(p.updateDate, p.createDate) = :rankDateEqual
+                                AND p.gachaMileageProgressId <= :progressId
+                            )
+                        )
+                    )
+                )',
+            [
+                'guildId' => $guildId,
+                'boardCode' => $boardCode,
+                'lifetimeStepsGreater' => max(0, (int) ($row['lifetimeSteps'] ?? 0)),
+                'lifetimeStepsEqual' => max(0, (int) ($row['lifetimeSteps'] ?? 0)),
+                'rankDateBefore' => (string) ($row['rankDate'] ?? ''),
+                'rankDateEqual' => (string) ($row['rankDate'] ?? ''),
+                'progressId' => max(0, (int) ($row['gachaMileageProgressId'] ?? 0)),
+            ]
+        );
+
+        $row['_rank'] = max(1, (int) ($rank['rank'] ?? 1));
+        return $row;
+    }
+
+    private static function leaderboardFocusWeeklyRow(string $guildId, string $boardCode, string $userId, DateTimeImmutable $weekStart): ?array
+    {
+        $weekStartSql = $weekStart->format('Y-m-d H:i:s');
+        $row = Database::fetch(
+            'SELECT l.userId,
+                    SUM(l.stepDelta) AS weeklySteps,
+                    MAX(l.createDate) AS rankDate,
+                    COALESCE(p.lifetimeSteps, 0) AS lifetimeSteps,
+                    COALESCE(p.positionStep, -1) AS positionStep,
+                    COALESCE(p.lastAnimatedStep, -1) AS lastAnimatedStep,
+                    u.userName,
+                    u.globalName,
+                    u.avatarHash,
+                    m.nickName,
+                    m.guildAvatarHash
+               FROM tbl_gacha_mileage_spin_ledger l
+          LEFT JOIN tbl_gacha_mileage_progress p
+                 ON p.guildId = l.guildId
+                AND p.userId = l.userId
+                AND p.boardCode = l.boardCode
+          LEFT JOIN tbl_user u
+                 ON u.userId = l.userId
+          LEFT JOIN tbl_member m
+                 ON m.guildId = l.guildId
+                AND m.userId = l.userId
+              WHERE l.guildId = :guildId
+                AND l.boardCode = :boardCode
+                AND l.userId = :userId
+                AND l.createDate >= :weekStart
+              GROUP BY l.userId,
+                       p.lifetimeSteps,
+                       p.positionStep,
+                       p.lastAnimatedStep,
+                       u.userName,
+                       u.globalName,
+                       u.avatarHash,
+                       m.nickName,
+                       m.guildAvatarHash
+             HAVING weeklySteps > 0
+              LIMIT 1',
+            [
+                'guildId' => $guildId,
+                'boardCode' => $boardCode,
+                'userId' => $userId,
+                'weekStart' => $weekStartSql,
+            ]
+        );
+
+        if (!$row) {
+            return null;
+        }
+
+        $rank = Database::fetch(
+            'SELECT COUNT(*) AS rank
+               FROM (
+                    SELECT userId,
+                           SUM(stepDelta) AS weeklySteps,
+                           MAX(createDate) AS rankDate
+                      FROM tbl_gacha_mileage_spin_ledger
+                     WHERE guildId = :guildId
+                       AND boardCode = :boardCode
+                       AND createDate >= :weekStart
+                  GROUP BY userId
+                    HAVING weeklySteps > 0
+               ) ranked
+	              WHERE ranked.weeklySteps > :weeklyStepsGreater
+	                 OR (
+	                    ranked.weeklySteps = :weeklyStepsEqual
+	                    AND ranked.rankDate <= :rankDate
+	                 )',
+            [
+                'guildId' => $guildId,
+                'boardCode' => $boardCode,
+                'weekStart' => $weekStartSql,
+                'weeklyStepsGreater' => max(0, (int) ($row['weeklySteps'] ?? 0)),
+                'weeklyStepsEqual' => max(0, (int) ($row['weeklySteps'] ?? 0)),
+                'rankDate' => (string) ($row['rankDate'] ?? ''),
+            ]
+        );
+
+        $row['_rank'] = max(1, (int) ($rank['rank'] ?? 1));
+        return $row;
     }
 
     private static function leaderboardRowsPayload(string $guildId, array $board, array $rows, string $scoreKey): array
@@ -977,7 +1864,7 @@ final class GachaMileageService
             }
 
             $players[] = [
-                'rank' => count($players) + 1,
+                'rank' => max(1, (int) ($row['_rank'] ?? (count($players) + 1))),
                 'userId' => (string) ($row['userId'] ?? ''),
                 'displayName' => trim((string) ($row['nickName'] ?? $row['globalName'] ?? $row['userName'] ?? 'Player')) ?: 'Player',
                 'avatarUrl' => self::rowAvatarUrl($guildId, $row),
@@ -1034,13 +1921,7 @@ final class GachaMileageService
             ];
         }
 
-        return [
-            'userId' => (string) ($row['userId'] ?? ''),
-            'displayName' => trim((string) ($row['nickName'] ?? $row['globalName'] ?? $row['userName'] ?? 'Player')) ?: 'Player',
-            'avatarUrl' => self::rowAvatarUrl($guildId, $row),
-            'positionStep' => self::positionFromLifetime(max(0, (int) ($row['lifetimeSteps'] ?? 0)), $board),
-            'lifetimeSteps' => max(0, (int) ($row['lifetimeSteps'] ?? 0)),
-        ];
+        return self::playerPayloadFromProgressRow($guildId, $board, $row);
     }
 
     private static function rowAvatarUrl(string $guildId, array $row): string
@@ -1054,6 +1935,18 @@ final class GachaMileageService
             }
         }
         return DiscordAssets::avatar($userId, (string) ($row['avatarHash'] ?? ''), 128);
+    }
+
+    private static function playerPayloadFromProgressRow(string $guildId, array $board, array $row): array
+    {
+        $lifetimeSteps = max(0, (int) ($row['lifetimeSteps'] ?? 0));
+        return [
+            'userId' => (string) ($row['userId'] ?? ''),
+            'displayName' => trim((string) ($row['nickName'] ?? $row['globalName'] ?? $row['userName'] ?? 'Player')) ?: 'Player',
+            'avatarUrl' => self::rowAvatarUrl($guildId, $row),
+            'positionStep' => self::positionFromLifetime($lifetimeSteps, $board),
+            'lifetimeSteps' => $lifetimeSteps,
+        ];
     }
 
     private static function grantReward(string $guildId, string $userId, array $board, array $reward): array
@@ -1092,6 +1985,17 @@ final class GachaMileageService
         $traceId = TransactionTraceService::generateTraceId('gacha_mileage');
         $createDate = date('Y-m-d H:i:s');
         $rewardRuleId = self::ensureRewardRule();
+        $rewardTemplateId = trim((string) ($reward['rewardTemplateId'] ?? ($reward['meta']['rewardTemplateId'] ?? '')));
+        $resolvedBundle = null;
+        if ($rewardTemplateId !== '' && class_exists('RewardTemplateService')) {
+            $resolvedBundle = RewardTemplateService::resolveTemplate($rewardTemplateId, isset($reward['stepIndex']) ? (int) $reward['stepIndex'] : null);
+        }
+        $rewardEventPayload = $reward;
+        if (is_array($resolvedBundle)) {
+            $rewardEventPayload['rewardTemplateId'] = $rewardTemplateId;
+            $rewardEventPayload['unitRewards'] = is_array($resolvedBundle['unitRewards'] ?? null) ? $resolvedBundle['unitRewards'] : [];
+            $rewardEventPayload['resolvedEntries'] = array_values($resolvedBundle['resolvedEntries'] ?? []);
+        }
 
         Database::insert('tbl_gacha_mileage_reward_claim', [
             'guildId' => $guildId,
@@ -1118,7 +2022,7 @@ final class GachaMileageService
                 'metadataJson' => json_encode([
                     'rule' => self::RULE_CODE,
                     'boardCode' => (string) ($board['boardCode'] ?? self::DEFAULT_BOARD_CODE),
-                    'reward' => $reward,
+                    'reward' => $rewardEventPayload,
                 ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
                 'createDate' => $createDate,
             ])
@@ -1128,7 +2032,22 @@ final class GachaMileageService
         $amount = max(1, (int) ($reward['amount'] ?? 1));
         $walletRows = [];
         $inventoryRow = null;
-        if (in_array($kind, ['coin', 'ticket', 'gem', 'potion'], true)) {
+        if (is_array($resolvedBundle) && class_exists('RewardTemplateService')) {
+            $bundleGrant = RewardTemplateService::grantRewardBundle(
+                $guildId,
+                $userId,
+                $resolvedBundle,
+                self::RULE_CODE,
+                $rewardId,
+                [
+                    'transactionGroupId' => $traceId,
+                    'createDate' => $createDate,
+                    'targetUserId' => $userId,
+                ]
+            );
+            $walletRows = array_values($bundleGrant['walletRows'] ?? []);
+            $inventoryRow = $bundleGrant['itemRows'][0] ?? $bundleGrant['lootBoxRows'][0] ?? null;
+        } elseif (in_array($kind, ['coin', 'ticket', 'gem', 'potion'], true)) {
             $walletRows[] = ShopUnitService::adjustWalletBalance(
                 $guildId,
                 $userId,
@@ -1178,6 +2097,42 @@ final class GachaMileageService
             'inventory' => $inventoryRow,
             'alreadyClaimed' => false,
         ];
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    private static function boardRewardDefinitions(array $board): array
+    {
+        $legacyRewards = array_values(array_filter($board['rewards'] ?? [], static fn (mixed $reward): bool => is_array($reward)));
+        $rewardNodes = [];
+
+        foreach (is_array($board['rewardNodes'] ?? null) ? $board['rewardNodes'] : [] as $node) {
+            if (!is_array($node)) {
+                continue;
+            }
+
+            $rewardTemplateId = trim((string) ($node['rewardTemplateId'] ?? ''));
+            $meta = is_array($node['meta'] ?? null) ? $node['meta'] : [];
+            $stepIndex = $node['stepIndex'] ?? null;
+            if ($rewardTemplateId === '' && trim((string) ($meta['kind'] ?? '')) === '') {
+                continue;
+            }
+
+            $rewardNodes[] = [
+                'id' => trim((string) ($node['id'] ?? '')) ?: ('reward_node_' . str_pad((string) (count($rewardNodes) + 1), 3, '0', STR_PAD_LEFT)),
+                'stepIndex' => $stepIndex !== null ? (int) $stepIndex : null,
+                'x' => $node['x'] ?? null,
+                'y' => $node['y'] ?? null,
+                'kind' => trim((string) ($meta['kind'] ?? 'coin')) ?: 'coin',
+                'amount' => max(1, (int) ($meta['amount'] ?? 1)),
+                'itemCode' => trim((string) ($meta['itemCode'] ?? '')),
+                'rewardTemplateId' => $rewardTemplateId,
+                'iconTemplateId' => trim((string) ($node['iconTemplateId'] ?? '')),
+                'label' => trim((string) ($node['label'] ?? ($meta['label'] ?? ''))),
+                'meta' => $meta,
+            ];
+        }
+
+        return array_merge($legacyRewards, $rewardNodes);
     }
 
     private static function ensureRewardRule(): int

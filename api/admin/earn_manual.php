@@ -29,6 +29,7 @@ try {
         'targetLabel' => $result['targetLabel'] ?? '',
         'recipientCount' => $result['recipientCount'] ?? 0,
         'unitRewards' => $result['unitRewards'],
+        'reason' => $result['reason'] ?? '',
     ];
     AuditLogger::finish($adminActionId, 'success', $result, $after);
     Response::json(['ok' => true] + $result + (new ManualEarnGrantService())->payload($guildId));

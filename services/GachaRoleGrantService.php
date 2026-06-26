@@ -481,8 +481,7 @@ final class GachaRoleGrantService
                FROM tbl_gacha_role_grant gr
           LEFT JOIN tbl_role r ON r.guildId = gr.guildId AND r.roleId = gr.roleId
               WHERE gr.guildId = :guildId AND gr.userId = :userId
-              ORDER BY COALESCE(gr.grantedAt, gr.createDate) ASC, gr.gachaRoleGrantId ASC
-              LIMIT ' . max(1, min(500, $limit)),
+              ORDER BY COALESCE(gr.grantedAt, gr.createDate) ASC, gr.gachaRoleGrantId ASC',
             ['guildId' => $guildId, 'userId' => $userId]
         );
 
@@ -504,7 +503,7 @@ final class GachaRoleGrantService
             return strcmp((string) ($right['latestDate'] ?? ''), (string) ($left['latestDate'] ?? ''));
         });
 
-        return $out;
+        return array_slice($out, 0, max(1, min(500, $limit)));
     }
 
     private function resolvedPrize(array $draw): array

@@ -13,8 +13,8 @@ window.DEKPOKE_CREDITS = {
 
   coreTeam: [
     { role: "Created by", names: ["DEKPOKE Team"] },
-    { role: "Server Owner / Platform Owner", names: ["KORDMHON"] },
-    { role: "Staff Team", names: ["[Staff 1]", "[Staff 2]", "[Staff 3]"] },
+    { role: "\u0e40\u0e08\u0e49\u0e32\u0e02\u0e2d\u0e07\u0e40\u0e0b\u0e34\u0e1f / \u0e40\u0e08\u0e49\u0e32\u0e02\u0e2d\u0e07\u0e23\u0e30\u0e1a\u0e1a", names: ["\u1d0b\u1d0f\u0280\u1d05\u1d0d\u029c\u1d0f\u0274"] },
+    { role: "\u0e17\u0e35\u0e21\u0e07\u0e32\u0e19", names: ["[Staff 1]", "[Staff 2]", "[Staff 3]"] },
     { role: "Project Direction", names: ["[Project Lead]"] },
     { role: "Meeting Coordinator", names: ["Meeting notes / planning / task summary"] }
   ],
@@ -36,7 +36,7 @@ window.DEKPOKE_CREDITS = {
       title: "Role Management Department",
       type: "department",
       role: "Role Management Team",
-      people: ["[Role Team / Role Staff]"] ,
+      people: ["[Role Team / Role Staff]"],
       note: "Handles role records, member role assignment, role sync, and role revision history.",
       pills: [
         "Discord Role Database",

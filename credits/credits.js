@@ -50,7 +50,16 @@
 
   function addCoreTeam() {
     const sec = section("Core Team");
-    (data.coreTeam || []).forEach((entry) => sec.appendChild(roleBlock(entry.role, entry.names)));
+    (data.coreTeam || []).forEach((entry) => sec.appendChild(roleBlock(entry.role, entry.names, entry.note)));
+    root.appendChild(sec);
+  }
+
+  function addRoleSources() {
+    if (!data.roleSources || !data.roleSources.length) return;
+    const sec = section("Discord Role Sources");
+    data.roleSources.forEach((entry) => {
+      sec.appendChild(roleBlock(entry.role, entry.names, entry.note));
+    });
     root.appendChild(sec);
   }
 
@@ -63,6 +72,11 @@
     } else if (dep.type === "department") {
       sec.appendChild(roleBlock(dep.role, dep.people, dep.note));
       sec.appendChild(pillBlock(dep.pills));
+    } else if (dep.type === "roles") {
+      (dep.entries || []).forEach((entry) => {
+        sec.appendChild(roleBlock(entry.role, entry.names, entry.note));
+      });
+      if (dep.pills && dep.pills.length) sec.appendChild(pillBlock(dep.pills));
     }
     root.appendChild(sec);
   }
@@ -107,6 +121,7 @@
 
   addIntro();
   addCoreTeam();
+  addRoleSources();
   (data.departments || []).forEach(addDepartment);
   addSupporters();
   addBotSystem();

@@ -1,11 +1,6 @@
 /*
   DEKPOKE End Credits Data
-  แก้รายชื่อที่ไฟล์นี้ไฟล์เดียวได้เลย
-
-  วิธีเพิ่มชื่อ:
-  - ใส่ชื่อในเครื่องหมายคำพูด "..."
-  - ถ้ามีหลายชื่อ ให้คั่นแต่ละบรรทัดด้วย comma (,)
-  - ตัวอย่าง: "ชื่อคนที่ 1", "ชื่อคนที่ 2"
+  Edit names in this file.
 */
 
 window.DEKPOKE_CREDITS = {
@@ -18,10 +13,10 @@ window.DEKPOKE_CREDITS = {
 
   coreTeam: [
     { role: "Created by", names: ["DEKPOKE Team"] },
-    { role: "Platform Owner", names: ["[ชื่อเจ้าของระบบ]"] },
-    { role: "Discord Server Owner", names: ["[ชื่อเจ้าของเซิร์ฟเวอร์ Discord]"] },
-    { role: "Project Direction", names: ["[ชื่อผู้ดูแลโปรเจกต์]"] },
-    { role: "Meeting Coordinator", names: ["เรียบเรียงการประชุม / สรุปแผนงาน / จัดลำดับงานระบบ"] }
+    { role: "Server Owner / Platform Owner", names: ["KORDMHON"] },
+    { role: "Staff Team", names: ["[Staff 1]", "[Staff 2]", "[Staff 3]"] },
+    { role: "Project Direction", names: ["[Project Lead]"] },
+    { role: "Meeting Coordinator", names: ["Meeting notes / planning / task summary"] }
   ],
 
   departments: [
@@ -40,9 +35,9 @@ window.DEKPOKE_CREDITS = {
     {
       title: "Role Management Department",
       type: "department",
-      role: "แผนกจัดการยศ",
-      people: ["[ชื่อทีม / รายชื่อผู้ดูแลยศ]"],
-      note: "ดูแลฐานข้อมูลยศ การผูกยศกับสมาชิก การซิงก์ยศ และประวัติการเปลี่ยนแปลงยศ",
+      role: "Role Management Team",
+      people: ["[Role Team / Role Staff]"] ,
+      note: "Handles role records, member role assignment, role sync, and role revision history.",
       pills: [
         "Discord Role Database",
         "Member Role Assignment",
@@ -55,9 +50,9 @@ window.DEKPOKE_CREDITS = {
     {
       title: "Reward Management Department",
       type: "department",
-      role: "แผนกจัดการของรางวัล",
-      people: ["[ชื่อทีม / รายชื่อผู้ดูแลของรางวัล]"],
-      note: "ดูแลเงื่อนไขรางวัล รายการของรางวัล ประวัติการแจก คลังไอเทม และขั้นตอนการรับรางวัล",
+      role: "Reward Management Team",
+      people: ["[Reward Team / Reward Staff]"],
+      note: "Handles reward rules, reward items, reward history, user inventory, and claim flow.",
       pills: [
         "Reward Rule Management",
         "Reward Event Logging",
@@ -120,19 +115,19 @@ window.DEKPOKE_CREDITS = {
 
   supporters: {
     "Nitro Boost Supporters": [
-      "[ชื่อ Booster 1]",
-      "[ชื่อ Booster 2]",
-      "[ชื่อ Booster 3]"
+      "[Booster 1]",
+      "[Booster 2]",
+      "[Booster 3]"
     ],
     "Donation Sponsors": [
-      "[ชื่อผู้สนับสนุนบริจาค 1]",
-      "[ชื่อผู้สนับสนุนบริจาค 2]",
-      "[ชื่อผู้สนับสนุนบริจาค 3]"
+      "[Donation Sponsor 1]",
+      "[Donation Sponsor 2]",
+      "[Donation Sponsor 3]"
     ],
     "Partner Discord Servers": [
-      "[ชื่อดิสพันธมิตร 1]",
-      "[ชื่อดิสพันธมิตร 2]",
-      "[ชื่อดิสพันธมิตร 3]"
+      "[Partner Server 1]",
+      "[Partner Server 2]",
+      "[Partner Server 3]"
     ],
     "Community Support": [
       "Moderators",
@@ -142,9 +137,9 @@ window.DEKPOKE_CREDITS = {
   },
 
   botSystem: {
-    mainRole: "ระบบบอทที่ใช้ในเซิร์ฟเวอร์",
-    mainBot: "[ชื่อบอทหลักของเซิร์ฟเวอร์]",
-    note: "ใช้สำหรับจัดการสมาชิก ยศ กิจกรรม ประกาศ การตรวจสอบ และการเชื่อมต่อระบบรางวัล",
+    mainRole: "Server Bot Systems",
+    mainBot: "[Main Server Bot]",
+    note: "Used for member management, roles, activities, announcements, audit logs, and reward system integration.",
     bots: [
       "DEKPOKE Discord Bot",
       "Role Sync Bot",
